@@ -15,16 +15,17 @@ from PySide6.QtWidgets import QWidget
 from ui import theme
 
 
-# Theoretical ceilings for progress bar fill (rune 6* Legend +12, grinded).
-MAX_SCORE = 420.0
-MAX_SWOP  = 200.0
-MAX_S2US  = 300.0
+# Bar-fill ceilings calibrated on realistic top-tier 6* Legend +12 rolls
+# (not grinded-perfect theoretical). A rune hitting 100% bar = excellent.
+MAX_SCORE = 300.0
+MAX_SWOP  = 150.0
+MAX_S2US  = 250.0
 
 # Zone thresholds (value units, NOT percent of max):
 #   [red->yellow, yellow->green, green->gold]
-ZONES_SCORE = (150.0, 200.0, 250.0)
-ZONES_SWOP  = (100.0, 120.0, 150.0)
-ZONES_S2US  = (100.0, 130.0, 180.0)
+ZONES_SCORE = (100.0, 150.0, 200.0)
+ZONES_SWOP  = (80.0, 100.0, 120.0)
+ZONES_S2US  = (100.0, 140.0, 180.0)
 
 
 def _zone_color(value: float, zones: tuple[float, float, float]) -> str:
