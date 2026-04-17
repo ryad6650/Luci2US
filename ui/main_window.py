@@ -12,6 +12,7 @@ from profile_store import load_profile_payload
 from ui import theme
 from ui.controllers.scan_controller import ScanController
 from ui.profile.profile_page import ProfilePage
+from ui.settings.settings_page import SettingsPage
 from ui.sidebar import Sidebar
 from ui.scan.scan_page import ScanPage
 from ui.widgets.background import BackgroundPane
@@ -65,8 +66,9 @@ class MainWindow(QMainWindow):
         self._stack.addWidget(_placeholder("Stats & Historique - a implementer"))
         # Index 5 : Profils
         self._stack.addWidget(self.profile_page)
-        # Index 6 : Paramètres (wiré dans Task 7)
-        self._stack.addWidget(_placeholder("Parametres - wiring dans Task 7"))
+        # Index 6 : Paramètres
+        self.settings_page = SettingsPage()
+        self._stack.addWidget(self.settings_page)
 
         bg_lay.addWidget(self._stack)
 
