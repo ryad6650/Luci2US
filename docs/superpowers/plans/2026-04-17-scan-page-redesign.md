@@ -103,19 +103,11 @@ Expected: PySide6 and pytest-qt installed without errors.
 
 `ui/__init__.py`, `ui/widgets/__init__.py`, `ui/scan/__init__.py`, `ui/controllers/__init__.py`, `tests/ui/__init__.py` — all empty.
 
-- [ ] **Step 4: Write `tests/ui/conftest.py`**
+- [ ] **Step 4: Skip custom conftest.py**
 
-```python
-"""Shared pytest-qt fixtures for UI tests."""
-import pytest
-from PySide6.QtWidgets import QApplication
+`pytest-qt` already ships a session-scoped `qapp` fixture (plus `qtbot`, exception hooking, etc.) the moment the plugin is installed. No custom `conftest.py` is needed at this stage. Tests in later tasks use `qapp` / `qtbot` directly from `pytest-qt`.
 
-
-@pytest.fixture(scope="session")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    return app
-```
+If a future task needs a shared fixture (e.g. a faked `Rune` factory), add `tests/ui/conftest.py` then.
 
 - [ ] **Step 5: Update `.gitignore`**
 
@@ -127,7 +119,7 @@ assets/swarfarm/
 - [ ] **Step 6: Commit**
 
 ```bash
-git add requirements.txt ui/ tests/ui/__init__.py tests/ui/conftest.py .gitignore
+git add requirements.txt ui/ tests/ui/__init__.py .gitignore
 git commit -m "feat(ui): scaffold PySide6 package + pytest-qt"
 ```
 
