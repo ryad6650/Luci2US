@@ -101,7 +101,37 @@ class SettingsPage(QWidget):
         swex_row.addWidget(browse_btn)
 
         lay.addLayout(swex_row)
+
+        # ── Bouton Save ──
+        save_btn = QPushButton("Sauvegarder")
+        save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        save_btn.clicked.connect(self._save)
+        save_btn.setFixedWidth(160)
+        save_btn.setStyleSheet(
+            f"QPushButton {{ background:{theme.COLOR_BRONZE};"
+            f" color:{theme.COLOR_BG_APP};"
+            f" border:none; border-radius:4px;"
+            f" padding:10px 18px; font-size:13px; font-weight:700; letter-spacing:0.5px; }}"
+            f"QPushButton:hover {{ background:{theme.COLOR_EMBER}; }}"
+        )
+        lay.addWidget(save_btn)
+
+        self._status_label = QLabel("")
+        self._status_label.setStyleSheet(
+            f"color:{theme.COLOR_KEEP}; font-size:11px; font-style:italic;"
+        )
+        lay.addWidget(self._status_label)
+
         lay.addStretch()
+
+    def _save(self) -> None:
+        cfg = _load_config()
+        cfg["lang"] = self._lang_combo.currentText()
+        cfg.setdefault("swex", {})
+        cfg["swex"]["drops_dir"] = self._drops_edit.text()
+        with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+        self._status_label.setText("Sauvegarde.")
 
     def _browse_drops(self) -> None:
         directory = QFileDialog.getExistingDirectory(

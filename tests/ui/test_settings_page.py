@@ -82,3 +82,48 @@ def test_drops_dir_has_browse_button(qapp, tmp_config):
     page = SettingsPage()
     buttons = [b.text() for b in page.findChildren(QPushButton)]
     assert any("Parcourir" in t for t in buttons)
+
+
+def test_save_writes_language_and_drops_dir(qapp, tmp_config):
+    from ui.settings.settings_page import SettingsPage
+    page = SettingsPage()
+    page._lang_combo.setCurrentText("FR")
+    page._drops_edit.setText("D:/new/drops")
+    page._save()
+    saved = json.loads(tmp_config.read_text(encoding="utf-8"))
+    assert saved["lang"] == "FR"
+    assert saved["swex"]["drops_dir"] == "D:/new/drops"
+
+
+def test_save_preserves_other_config_keys(qapp, tmp_path, monkeypatch):
+    cfg = tmp_path / "config.json"
+    cfg.write_text(
+        json.dumps({
+            "lang": "FR",
+            "swex": {"drops_dir": "C:/x", "poll_interval": 0.5},
+            "s2us": {"filter_file": "C:/y.s2us"},
+        }),
+        encoding="utf-8",
+    )
+    from ui.settings import settings_page
+    monkeypatch.setattr(settings_page, "_CONFIG_PATH", str(cfg))
+    from ui.settings.settings_page import SettingsPage
+    page = SettingsPage()
+    page._lang_combo.setCurrentText("EN")
+    page._save()
+    saved = json.loads(cfg.read_text(encoding="utf-8"))
+    assert saved["lang"] == "EN"
+    assert saved["swex"]["poll_interval"] == 0.5
+    assert saved["s2us"]["filter_file"] == "C:/y.s2us"
+
+
+def test_save_button_exists_and_triggers_save(qapp, tmp_config):
+    from ui.settings.settings_page import SettingsPage
+    from PySide6.QtWidgets import QPushButton
+    page = SettingsPage()
+    save_btns = [b for b in page.findChildren(QPushButton) if "Sauvegarder" in b.text()]
+    assert len(save_btns) == 1
+    page._lang_combo.setCurrentText("EN")
+    save_btns[0].click()
+    saved = json.loads(tmp_config.read_text(encoding="utf-8"))
+    assert saved["lang"] == "EN"
