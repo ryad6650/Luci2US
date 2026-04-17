@@ -1,5 +1,5 @@
-"""QMainWindow shell: sidebar + content stack. Only Scan is implemented;
-other nav items show a placeholder."""
+"""QMainWindow shell: sidebar + content stack. Scan, Profils, Parametres sont implementes;
+Filtres / Runes / Monstres / Stats & Historique affichent un placeholder."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt

@@ -1,4 +1,4 @@
-"""Left sidebar - logo + nav items (Scan, Profil, Historique, Stats, Parametres)."""
+"""Left sidebar - logo + nav items (Scan, Filtres, Runes, Monstres, Stats & Historique, Profils, Parametres)."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal

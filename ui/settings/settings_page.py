@@ -128,9 +128,19 @@ class SettingsPage(QWidget):
         cfg["lang"] = self._lang_combo.currentText()
         cfg.setdefault("swex", {})
         cfg["swex"]["drops_dir"] = self._drops_edit.text()
-        with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2, ensure_ascii=False)
-        self._status_label.setText("Sauvegarde.")
+        try:
+            with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2, ensure_ascii=False)
+        except OSError as exc:
+            self._status_label.setStyleSheet(
+                f"color:{theme.COLOR_SELL}; font-size:11px; font-style:italic;"
+            )
+            self._status_label.setText(f"Erreur : {exc}")
+            return
+        self._status_label.setStyleSheet(
+            f"color:{theme.COLOR_KEEP}; font-size:11px; font-style:italic;"
+        )
+        self._status_label.setText("Sauvegardé.")
 
     def _browse_drops(self) -> None:
         directory = QFileDialog.getExistingDirectory(
