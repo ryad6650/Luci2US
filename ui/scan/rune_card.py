@@ -57,6 +57,7 @@ class RuneCard(QFrame):
         outer.setSpacing(6)
 
         self._title = QLabel("-")
+        self._title.setTextFormat(Qt.TextFormat.RichText)
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title.setStyleSheet(
             f"color:{theme.COLOR_GOLD_TITLE}; font-size:14px; font-weight:700;"
@@ -144,7 +145,10 @@ class RuneCard(QFrame):
         self._apply_style()
 
     def update_rune(self, rune: Rune, mana: int, set_bonus_text: str = "") -> None:
-        self._title.setText(f"Rune {rune.set} ({rune.slot})")
+        self._title.setText(
+            f"Rune {rune.set} ({rune.slot}) "
+            f"<span style='color:{theme.COLOR_GOLD}; font-weight:700'>+{rune.level}</span>"
+        )
         self._icon.set_logo(rune.set)
         self._main.setText(_main_stat_line(rune))
         self._mana.set_value(mana)
