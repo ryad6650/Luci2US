@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui import theme
+from ui.controllers.scan_controller import ScanController
 from ui.sidebar import Sidebar
 from ui.scan.scan_page import ScanPage
 from ui.widgets.background import BackgroundPane
@@ -56,6 +57,16 @@ class MainWindow(QMainWindow):
         root_lay.addWidget(content, 1)
 
         self.setCentralWidget(root)
+
+        self.controller = ScanController(self)
+        self.controller.rune_evaluated.connect(
+            self.scan_page.on_rune,
+            type=Qt.ConnectionType.QueuedConnection,
+        )
+        self.controller.state_changed.connect(
+            self.scan_page.set_active,
+            type=Qt.ConnectionType.QueuedConnection,
+        )
 
     def _on_nav(self, key: str) -> None:
         index = {"scan": 0, "profile": 1, "history": 2, "stats": 3, "settings": 4}.get(key, 0)
