@@ -1,4 +1,4 @@
-"""Verdict card under each rune-card: badge + Score + SWOP + S2US, framed like a rune card."""
+"""Verdict card under each rune-card: badge + Score + SWOP + S2US + quality bars."""
 from __future__ import annotations
 from enum import Enum
 
@@ -9,6 +9,10 @@ from PySide6.QtWidgets import (
 )
 
 from ui import theme
+from ui.widgets.quality_bar import (
+    QualityBar, MAX_SCORE, MAX_SWOP, MAX_S2US,
+    ZONES_SCORE, ZONES_SWOP, ZONES_S2US,
+)
 
 
 class VerdictKind(Enum):
@@ -41,8 +45,9 @@ class VerdictBar(QFrame):
         eff_box = QWidget()
         eff_lay = QVBoxLayout(eff_box)
         eff_lay.setContentsMargins(0, 0, 0, 0)
-        eff_lay.setSpacing(2)
+        eff_lay.setSpacing(3)
 
+        # Row 1: Score + bar
         score_row = QWidget()
         srl = QHBoxLayout(score_row)
         srl.setContentsMargins(0, 0, 0, 0)
@@ -59,16 +64,32 @@ class VerdictBar(QFrame):
         srl.addWidget(self._score_label)
         srl.addStretch()
         eff_lay.addWidget(score_row)
+        self._score_bar = QualityBar()
+        eff_lay.addWidget(self._score_bar)
 
-        self._eff_label = QLabel(
-            f"<b style='color:{theme.COLOR_GOLD}'>SWOP</b> -<br>"
+        # Row 2: SWOP label + bar
+        self._swop_label = QLabel(
+            f"<b style='color:{theme.COLOR_GOLD}'>SWOP</b> -"
+        )
+        self._swop_label.setTextFormat(Qt.TextFormat.RichText)
+        self._swop_label.setStyleSheet(
+            f"color:{theme.COLOR_TEXT_SUB}; font-size:10px;"
+        )
+        eff_lay.addWidget(self._swop_label)
+        self._swop_bar = QualityBar()
+        eff_lay.addWidget(self._swop_bar)
+
+        # Row 3: S2US label + bar
+        self._s2us_label = QLabel(
             f"<b style='color:{theme.COLOR_GOLD}'>S2US</b> -"
         )
-        self._eff_label.setTextFormat(Qt.TextFormat.RichText)
-        self._eff_label.setStyleSheet(
-            f"color:{theme.COLOR_TEXT_SUB}; font-size:10px; line-height:1.5;"
+        self._s2us_label.setTextFormat(Qt.TextFormat.RichText)
+        self._s2us_label.setStyleSheet(
+            f"color:{theme.COLOR_TEXT_SUB}; font-size:10px;"
         )
-        eff_lay.addWidget(self._eff_label)
+        eff_lay.addWidget(self._s2us_label)
+        self._s2us_bar = QualityBar()
+        eff_lay.addWidget(self._s2us_bar)
 
         outer.addWidget(eff_box, 1)
 
@@ -103,8 +124,18 @@ class VerdictBar(QFrame):
                        swop: tuple[float, float], s2us: tuple[float, float]) -> None:
         self._kind = kind
         self._score_label.setText(f"Score {score}")
-        self._eff_label.setText(
-            f"<b style='color:{theme.COLOR_GOLD}'>SWOP</b> {swop[0]:.1f}% (max {swop[1]:.1f}%)<br>"
-            f"<b style='color:{theme.COLOR_GOLD}'>S2US</b> {s2us[0]:.1f}% (max {s2us[1]:.1f}%)"
+        self._score_bar.set_value(float(score), MAX_SCORE, ZONES_SCORE)
+
+        self._swop_label.setText(
+            f"<b style='color:{theme.COLOR_GOLD}'>SWOP</b> {swop[0]:.1f}% "
+            f"<span style='color:{theme.COLOR_TEXT_DIM}'>(max {swop[1]:.1f}%)</span>"
         )
+        self._swop_bar.set_value(swop[0], MAX_SWOP, ZONES_SWOP)
+
+        self._s2us_label.setText(
+            f"<b style='color:{theme.COLOR_GOLD}'>S2US</b> {s2us[0]:.1f}% "
+            f"<span style='color:{theme.COLOR_TEXT_DIM}'>(max {s2us[1]:.1f}%)</span>"
+        )
+        self._s2us_bar.set_value(s2us[0], MAX_S2US, ZONES_S2US)
+
         self._repaint_style()

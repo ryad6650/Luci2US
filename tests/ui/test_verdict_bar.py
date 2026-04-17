@@ -17,5 +17,5 @@ def test_update(qapp):
     )
     assert w._badge.text() == "PWR-UP"
     assert "184" in w._score_label.text()
-    assert "84.1" in w._eff_label.text()
-    assert "108.2" in w._eff_label.text()
+    assert "84.1" in w._swop_label.text()
+    assert "108.2" in w._s2us_label.text()
