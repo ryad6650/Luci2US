@@ -28,7 +28,6 @@ def _load_config() -> dict:
 class SettingsPage(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setStyleSheet(f"background:{theme.COLOR_BG_APP};")
 
         cfg = _load_config()
 
