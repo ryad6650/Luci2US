@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Scan v4</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0604; color: #f0e6d0; font-family: 'Segoe UI', sans-serif; padding: 30px; min-height: 100vh; }
+  h1 { color: #e8c96a; font-size: 18px; margin-bottom: 4px; }
+  .sub { color: #9ca3af; font-size: 12px; margin-bottom: 20px; }
+
+  .wrap { background: #1a0f07 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><path d="M0 0h80v80H0z" fill="%231a0f07"/><path d="M40 20l4 12h12l-9 7 4 12-11-7-11 7 4-12-9-7h12z" fill="%23261a10" opacity=".25"/></svg>'); border: 2px solid #5a3d1f; border-radius: 10px; padding: 16px; max-width: 1100px; }
+
+  .head { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+  .btn { background: linear-gradient(180deg, #c67032 0%, #8b4a1f 100%); color: #fff; font-weight: 700; padding: 9px 22px; border-radius: 5px; font-size: 13px; border: 1px solid #e8a050; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 2px 4px rgba(0,0,0,.4); cursor: pointer; }
+  .state { color: #8ec44a; font-size: 12px; font-weight: 600; letter-spacing: .5px; display: flex; align-items: center; gap: 8px; }
+  .state::before { content:''; width: 9px; height: 9px; border-radius: 50%; background: #8ec44a; box-shadow: 0 0 10px #8ec44a; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .4; } }
+
+  .counters { display: grid; grid-template-columns: repeat(4, 1fr); background: linear-gradient(180deg, #2d1f14, #1a0f07); border: 1px solid #5a3d1f; border-radius: 5px; padding: 10px; margin-bottom: 14px; box-shadow: inset 0 1px 0 rgba(232,201,106,.15); }
+  .cnt { text-align: center; border-right: 1px solid #3d2818; padding: 2px 4px; }
+  .cnt:last-child { border-right: none; }
+  .cnt .k { font-size: 10px; color: #ddd0b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+  .cnt .v { font-size: 20px; font-weight: 700; color: #e8c96a; font-family: 'Georgia', serif; }
+
+  .main { display: grid; grid-template-columns: 240px 1fr 1fr; gap: 14px; }
+  .col-label { font-size: 10px; color: #ddd0b8; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 600; }
+
+  .history { background: linear-gradient(180deg, #2d1f14, #1a0f07); border: 1px solid #5a3d1f; border-radius: 5px; padding: 6px; max-height: 460px; overflow-y: auto; }
+  .history::-webkit-scrollbar { width: 5px; }
+  .history::-webkit-scrollbar-track { background: #1a0f07; }
+  .history::-webkit-scrollbar-thumb { background: #5a3d1f; border-radius: 3px; }
+  .hist-item { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; padding: 6px 7px; border-radius: 3px; cursor: pointer; transition: background .15s; border-bottom: 1px solid #2d1f14; }
+  .hist-item:hover { background: rgba(232,201,106,.06); }
+  .hist-icon { width: 30px; height: 30px; }
+  .hist-icon img { width: 100%; height: 100%; object-fit: contain; }
+  .hist-info { min-width: 0; }
+  .hist-info .n { color: #f0e6d0; font-size: 11px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist-info .s { color: #ddd0b8; font-size: 10px; line-height: 1.2; margin-top: 1px; }
+  .hist-info .s .lvl { color: #e8c96a; font-weight: 600; }
+  .hist-tag { font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; letter-spacing: .5px; }
+  .hist-tag.keep { background: #8ec44a; color: #1a0f07; }
+  .hist-tag.sell { background: #d84a3a; color: #fff; }
+  .hist-tag.pwr { background: #f5a030; color: #1a0f07; }
+
+  .rune-card { background: #1a0f07; border: 1px solid #2d1f14; border-radius: 7px; padding: 10px 12px 9px; transition: box-shadow .3s; }
+  .rune-card.keep { box-shadow: 0 0 0 1px #8ec44a, 0 0 18px rgba(142,196,74,.4); }
+  .rune-card.sell { box-shadow: 0 0 0 1px #d84a3a, 0 0 18px rgba(216,74,58,.35); }
+  .rune-card.powerup { box-shadow: 0 0 0 1px #f5a030, 0 0 18px rgba(245,160,48,.35); }
+
+  .rc-title { text-align: center; color: #e8b040; font-size: 14px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.7); margin-bottom: 7px; }
+  .rc-body { display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .rc-icon { position: relative; width: 52px; height: 52px; }
+  .rc-icon img { width: 100%; height: 100%; object-fit: contain; }
+  .rc-stars { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); font-size: 7px; color: #f8c040; letter-spacing: -1.3px; text-shadow: 0 1px 1px rgba(0,0,0,.8); white-space: nowrap; }
+  .rc-main { color: #f0e6d0; font-size: 16px; font-weight: 600; text-align: center; }
+  .rc-right { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+  .rc-grade { background: #a05a2a; color: #f8e8c8; font-weight: 700; font-size: 10px; padding: 3px 9px; border-radius: 3px; border: 1px solid #c06838; white-space: nowrap; }
+  .rc-mana { background: #5a2e14; color: #e8d5b0; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 3px; border: 1px solid #7d3e1a; display: flex; align-items: center; gap: 4px; }
+  .rc-mana .flame { color: #f5a030; font-size: 11px; }
+  .rc-subs { padding: 3px 2px 6px; }
+  .rc-sub { color: #d8ccab; font-size: 11px; line-height: 1.45; }
+  .rc-setbonus { color: #9cc848; font-size: 11px; font-weight: 500; padding-top: 6px; border-top: 1px solid #2d1f14; }
+
+  .verdict-wrap { margin-top: 8px; }
+  .verdict { background: linear-gradient(180deg, #2d1f14, #1a0f07); border: 1px solid #5a3d1f; border-radius: 5px; padding: 8px 11px; display: flex; align-items: center; gap: 10px; }
+  .verdict.keep { border-color: #8ec44a; background: linear-gradient(180deg, rgba(142,196,74,.12), rgba(26,15,7,.9)); }
+  .verdict.powerup { border-color: #f5a030; background: linear-gradient(180deg, rgba(245,160,48,.12), rgba(26,15,7,.9)); }
+  .verdict.sell { border-color: #d84a3a; background: linear-gradient(180deg, rgba(216,74,58,.12), rgba(26,15,7,.9)); }
+
+  .v-badge { font-weight: 900; font-size: 11px; padding: 4px 10px; border-radius: 3px; letter-spacing: 1px; white-space: nowrap; }
+  .v-badge.keep { background: #8ec44a; color: #1a0f07; }
+  .v-badge.powerup { background: #f5a030; color: #1a0f07; }
+  .v-badge.sell { background: #d84a3a; color: #fff; }
+  .v-eff { flex: 1; font-size: 10px; color: #ddd0b8; line-height: 1.5; }
+  .v-eff b { color: #e8c96a; font-weight: 600; }
+
+  .note { margin-top: 18px; padding: 12px 16px; background: #0e1116; border: 1px solid #262626; border-radius: 8px; font-size: 12px; color: #a1a1aa; max-width: 1100px; }
+  .note b { color: #e8c96a; }
+</style>
+</head>
+<body>
+
+<h1>Page Scan v4 — Largeur libre</h1>
+<div class="sub">Document HTML complet, 1100px max. Historique 240px, 2 cards 1fr chacune.</div>
+
+<div class="wrap">
+  <div class="head">
+    <div class="btn">▶ START</div>
+    <div class="state">SCANNING</div>
+  </div>
+
+  <div class="counters">
+    <div class="cnt"><div class="k">Runes scan</div><div class="v">142</div></div>
+    <div class="cnt"><div class="k">Keep</div><div class="v">31</div></div>
+    <div class="cnt"><div class="k">Sell</div><div class="v">111</div></div>
+    <div class="cnt"><div class="k">Time</div><div class="v">12:34</div></div>
+  </div>
+
+  <div class="main">
+
+    <div>
+      <div class="col-label">Historique</div>
+      <div class="history">
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/endure.png"></div><div class="hist-info"><div class="n">Endurance (1)</div><div class="s"><span class="lvl">+12</span> · ATQ +22</div></div><div class="hist-tag keep">KEEP</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/violent.png"></div><div class="hist-info"><div class="n">Violent (2)</div><div class="s"><span class="lvl">+9</span> · VIT +25</div></div><div class="hist-tag pwr">PWR</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/swift.png"></div><div class="hist-info"><div class="n">Rapide (5)</div><div class="s"><span class="lvl">+6</span> · PV +15%</div></div><div class="hist-tag sell">SELL</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/fatal.png"></div><div class="hist-info"><div class="n">Fatal (4)</div><div class="s"><span class="lvl">+12</span> · DC +35%</div></div><div class="hist-tag keep">KEEP</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/rage.png"></div><div class="hist-info"><div class="n">Rage (3)</div><div class="s"><span class="lvl">+3</span> · DEF +18%</div></div><div class="hist-tag sell">SELL</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/blade.png"></div><div class="hist-info"><div class="n">Lame (6)</div><div class="s"><span class="lvl">+9</span> · PV +15%</div></div><div class="hist-tag keep">KEEP</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/focus.png"></div><div class="hist-info"><div class="n">Concentration (2)</div><div class="s"><span class="lvl">+6</span> · VIT +18</div></div><div class="hist-tag sell">SELL</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/despair.png"></div><div class="hist-info"><div class="n">Desespoir (1)</div><div class="s"><span class="lvl">+12</span> · ATQ +22</div></div><div class="hist-tag pwr">PWR</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/will.png"></div><div class="hist-info"><div class="n">Will (5)</div><div class="s"><span class="lvl">+3</span> · PV +1880</div></div><div class="hist-tag sell">SELL</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/nemesis.png"></div><div class="hist-info"><div class="n">Nemesis (4)</div><div class="s"><span class="lvl">+9</span> · RES +22%</div></div><div class="hist-tag keep">KEEP</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/vampire.png"></div><div class="hist-info"><div class="n">Vampire (2)</div><div class="s"><span class="lvl">+6</span> · VIT +22</div></div><div class="hist-tag sell">SELL</div></div>
+        <div class="hist-item"><div class="hist-icon"><img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/guard.png"></div><div class="hist-info"><div class="n">Garde (3)</div><div class="s"><span class="lvl">+12</span> · DEF +22%</div></div><div class="hist-tag sell">SELL</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="col-label">Dernière rune</div>
+      <div class="rune-card keep">
+        <div class="rc-title">Rune Endurance (1)</div>
+        <div class="rc-body">
+          <div class="rc-icon">
+            <div class="rc-stars">★★★★★★</div>
+            <img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/endure.png">
+          </div>
+          <div class="rc-main">ATQ +22</div>
+          <div class="rc-right">
+            <div class="rc-grade">Légendaire</div>
+            <div class="rc-mana"><span class="flame">◆</span> 65</div>
+          </div>
+        </div>
+        <div class="rc-subs">
+          <div class="rc-sub">PV +6%</div>
+          <div class="rc-sub">ATQ +6%</div>
+          <div class="rc-sub">VIT +6</div>
+          <div class="rc-sub">Précision +6%</div>
+        </div>
+        <div class="rc-setbonus">2 Set : RES +20%</div>
+      </div>
+      <div class="verdict-wrap">
+        <div class="verdict keep">
+          <div class="v-badge keep">KEEP</div>
+          <div class="v-eff"><b>SWOP</b> 98.3% (max 112.4%)<br><b>S2US</b> 127.4% (max 145.0%)</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="col-label">Meilleure rune</div>
+      <div class="rune-card powerup">
+        <div class="rc-title">Rune Violent (2)</div>
+        <div class="rc-body">
+          <div class="rc-icon">
+            <div class="rc-stars">★★★★★★</div>
+            <img src="https://raw.githubusercontent.com/swarfarm/swarfarm/master/herders/static/herders/images/runes/violent.png">
+          </div>
+          <div class="rc-main">VIT +25</div>
+          <div class="rc-right">
+            <div class="rc-grade">Légendaire</div>
+            <div class="rc-mana"><span class="flame">◆</span> 88</div>
+          </div>
+        </div>
+        <div class="rc-subs">
+          <div class="rc-sub">PV +15%</div>
+          <div class="rc-sub">CC +9%</div>
+          <div class="rc-sub">DC +12%</div>
+          <div class="rc-sub">Précision +5%</div>
+        </div>
+        <div class="rc-setbonus">4 Set : Tour additionnel 22%</div>
+      </div>
+      <div class="verdict-wrap">
+        <div class="verdict powerup">
+          <div class="v-badge powerup">PWR-UP</div>
+          <div class="v-eff"><b>SWOP</b> 84.1% (max 118.6%)<br><b>S2US</b> 108.2% (max 152.0%)</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="note">
+  <b>Note</b> — Cette maquette fait 1100px de large max. Quand l'app tournera en PySide6, elle s'adaptera à la fenêtre (redimensionnable, minsize 900×550). Les 3 colonnes restent toujours côte à côte.
+</div>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Build artefacts
+build/
+dist/
+*.spec
+
+# Local data
+history.db
+config.json
+*.log
+
+# Virtualenvs / editors
+.venv/
+venv/
+.env
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Fetched assets (run scripts/fetch_swarfarm_assets.py)
+assets/swarfarm/
