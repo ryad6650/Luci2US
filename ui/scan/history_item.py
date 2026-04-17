@@ -15,6 +15,7 @@ _VERDICT_TO_KIND = {
     "SELL": TagKind.SELL,
     "PWR-UP": TagKind.POWERUP,
     "POWERUP": TagKind.POWERUP,
+    "POWER-UP": TagKind.POWERUP,
 }
 
 

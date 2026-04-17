@@ -18,6 +18,7 @@ _DECISION_TO_STATUS = {
     "SELL": (RuneCardStatus.SELL, VerdictKind.SELL),
     "PWR-UP": (RuneCardStatus.POWERUP, VerdictKind.POWERUP),
     "POWERUP": (RuneCardStatus.POWERUP, VerdictKind.POWERUP),
+    "POWER-UP": (RuneCardStatus.POWERUP, VerdictKind.POWERUP),
 }
 
 
@@ -82,7 +83,7 @@ class ScanPage(QWidget):
             self._counts["kept"] += 1
         elif verdict.decision == "SELL":
             self._counts["sold"] += 1
-        elif verdict.decision in ("PWR-UP", "POWERUP"):
+        elif verdict.decision in ("PWR-UP", "POWERUP", "POWER-UP"):
             self._counts["pwrup"] += 1
         self._counters.update_counts(**self._counts)
 
