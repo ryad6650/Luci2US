@@ -6,7 +6,8 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget,
+    QComboBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit,
+    QPushButton, QVBoxLayout, QWidget,
 )
 
 from ui import theme
@@ -66,4 +67,45 @@ class SettingsPage(QWidget):
         lang_row.addStretch()
 
         lay.addLayout(lang_row)
+
+        # ── SWEX drops dir ──
+        swex_label = QLabel("SWEX - Dossier des drops")
+        swex_label.setStyleSheet(
+            f"color:{theme.COLOR_GOLD}; font-size:13px; font-weight:600;"
+        )
+        lay.addWidget(swex_label)
+
+        swex_row = QHBoxLayout()
+        swex_row.setSpacing(8)
+
+        self._drops_edit = QLineEdit()
+        self._drops_edit.setText(cfg.get("swex", {}).get("drops_dir", ""))
+        self._drops_edit.setStyleSheet(
+            f"QLineEdit {{ background:{theme.COLOR_BG_FRAME};"
+            f" color:{theme.COLOR_TEXT_MAIN};"
+            f" border:1px solid {theme.COLOR_BORDER_FRAME};"
+            f" border-radius:3px; padding:6px 8px; font-size:12px; }}"
+        )
+        swex_row.addWidget(self._drops_edit, 1)
+
+        browse_btn = QPushButton("Parcourir")
+        browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        browse_btn.clicked.connect(self._browse_drops)
+        browse_btn.setStyleSheet(
+            f"QPushButton {{ background:{theme.COLOR_BRONZE_DARK};"
+            f" color:{theme.COLOR_GOLD};"
+            f" border:1px solid {theme.COLOR_BRONZE};"
+            f" border-radius:3px; padding:6px 14px; font-size:12px; font-weight:600; }}"
+            f"QPushButton:hover {{ background:{theme.COLOR_BRONZE}; color:{theme.COLOR_BG_APP}; }}"
+        )
+        swex_row.addWidget(browse_btn)
+
+        lay.addLayout(swex_row)
         lay.addStretch()
+
+    def _browse_drops(self) -> None:
+        directory = QFileDialog.getExistingDirectory(
+            self, "Choisir le dossier des drops SWEX", self._drops_edit.text()
+        )
+        if directory:
+            self._drops_edit.setText(directory)

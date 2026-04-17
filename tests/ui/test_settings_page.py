@@ -58,3 +58,27 @@ def test_language_dropdown_has_fr_and_en(qapp, tmp_config):
     page = SettingsPage()
     items = [page._lang_combo.itemText(i) for i in range(page._lang_combo.count())]
     assert items == ["FR", "EN"]
+
+
+def test_drops_dir_loaded_from_config(qapp, tmp_config):
+    from ui.settings.settings_page import SettingsPage
+    page = SettingsPage()
+    assert page._drops_edit.text() == "C:/tmp/drops"
+
+
+def test_drops_dir_empty_when_missing(qapp, tmp_path, monkeypatch):
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({}), encoding="utf-8")
+    from ui.settings import settings_page
+    monkeypatch.setattr(settings_page, "_CONFIG_PATH", str(cfg))
+    from ui.settings.settings_page import SettingsPage
+    page = SettingsPage()
+    assert page._drops_edit.text() == ""
+
+
+def test_drops_dir_has_browse_button(qapp, tmp_config):
+    from ui.settings.settings_page import SettingsPage
+    from PySide6.QtWidgets import QPushButton
+    page = SettingsPage()
+    buttons = [b.text() for b in page.findChildren(QPushButton)]
+    assert any("Parcourir" in t for t in buttons)
