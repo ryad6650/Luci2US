@@ -53,7 +53,7 @@ class HistoryItem(QWidget):
 
         self._sub_label = QLabel(
             f"<span style='color:{theme.COLOR_GOLD};font-weight:600'>+{rune.level}</span>"
-            f" {_main_stat_str(rune)}"
+            f" &middot; {_main_stat_str(rune)}"
         )
         self._sub_label.setTextFormat(Qt.TextFormat.RichText)
         self._sub_label.setStyleSheet(
