@@ -17,6 +17,7 @@ class HistoryList(QScrollArea):
         super().__init__(parent)
         self.setWidgetResizable(True)
         self.setFixedWidth(theme.SIZE_HISTORY_W)
+        self.setMinimumHeight(theme.SIZE_HISTORY_MAX_H)
         self.setMaximumHeight(theme.SIZE_HISTORY_MAX_H)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setStyleSheet(

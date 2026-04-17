@@ -21,6 +21,34 @@ from ui.main_window import MainWindow
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
+
+_SET_BONUS: dict[str, str] = {
+    "Energie": "2 Set : PV +15%",
+    "Garde": "2 Set : DEF +15%",
+    "Rapide": "4 Set : VIT +25%",
+    "Lame": "2 Set : TC +12%",
+    "Concentration": "2 Set : PRE +20%",
+    "Endurance": "2 Set : RES +20%",
+    "Fatal": "4 Set : ATQ +35%",
+    "Desespoir": "4 Set : Etourdissement 25%",
+    "Vampire": "4 Set : Drain 35%",
+    "Will": "2 Set : Immunite 1 tour",
+    "Violent": "4 Set : Tour additionnel",
+    "Nemesis": "2 Set : Barre ATB +4%",
+    "Vengeance": "2 Set : Contre-attaque 15%",
+    "Destruction": "2 Set : Ignore 30% PV max",
+    "Combat": "2 Set : ATQ +8% allies",
+    "Determination": "2 Set : DEF +8% allies",
+    "Amelioration": "2 Set : PV +8% allies",
+    "Precision": "2 Set : PRE +10% allies",
+    "Tolerance": "2 Set : RES +10% allies",
+    "Rage": "4 Set : DC +40%",
+    "Bouclier": "2 Set : Bouclier 15% PV",
+    "Intangible": "2 Set : Intangible 1 tour",
+    "Sceau": "2 Set : Sceau 1 tour",
+    "Immemorial": "2 Set : Immemorial",
+}
+
 DEFAULT_CONFIG = {
     "db_path": "history.db",
     "lang": "FR",
@@ -72,7 +100,7 @@ def main() -> int:
             rune, verdict,
             mana=_estimate_mana(rune) if verdict.decision == "SELL" else 0,
             swop=swop, s2us=s2us,
-            set_bonus="",
+            set_bonus=_SET_BONUS.get(rune.set, ""),
         )
 
     def on_state_change(state: State) -> None:

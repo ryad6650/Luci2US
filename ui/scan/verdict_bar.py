@@ -1,10 +1,12 @@
-"""Verdict bar under each rune-card: badge + Score + SWOP + S2US."""
+"""Verdict card under each rune-card: badge + Score + SWOP + S2US, framed like a rune card."""
 from __future__ import annotations
 from enum import Enum
 
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
+from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtWidgets import (
+    QWidget, QHBoxLayout, QVBoxLayout, QLabel, QFrame, QGraphicsDropShadowEffect,
+)
 
 from ui import theme
 
@@ -23,18 +25,18 @@ _COLORS = {
 }
 
 
-class VerdictBar(QWidget):
+class VerdictBar(QFrame):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._kind = VerdictKind.KEEP
 
         outer = QHBoxLayout(self)
-        outer.setContentsMargins(11, 8, 11, 8)
-        outer.setSpacing(10)
+        outer.setContentsMargins(14, 11, 14, 11)
+        outer.setSpacing(12)
 
         self._badge = QLabel("KEEP")
         self._badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        outer.addWidget(self._badge)
+        outer.addWidget(self._badge, 0, Qt.AlignmentFlag.AlignVCenter)
 
         eff_box = QWidget()
         eff_lay = QVBoxLayout(eff_box)
@@ -52,7 +54,7 @@ class VerdictBar(QWidget):
         srl.addWidget(icon)
         self._score_label = QLabel("Score 0")
         self._score_label.setStyleSheet(
-            f"color:{theme.COLOR_GOLD}; font-size:11px; font-weight:700;"
+            f"color:{theme.COLOR_GOLD}; font-size:12px; font-weight:700;"
         )
         srl.addWidget(self._score_label)
         srl.addStretch()
@@ -77,13 +79,20 @@ class VerdictBar(QWidget):
         self.setStyleSheet(
             f"""
             VerdictBar {{
-                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-                    stop:0 rgba(45,31,20,0.85), stop:1 rgba(26,15,7,0.9));
+                background: rgba(26,15,7,0.9);
                 border:1px solid {bg};
-                border-radius:5px;
+                border-radius:7px;
             }}
             """
         )
+        glow = QGraphicsDropShadowEffect(self)
+        glow.setBlurRadius(18)
+        glow.setOffset(0, 0)
+        c = QColor(bg)
+        c.setAlpha(100)
+        glow.setColor(c)
+        self.setGraphicsEffect(glow)
+
         self._badge.setText(_LABELS[self._kind])
         self._badge.setStyleSheet(
             f"background:{bg}; color:{fg}; font-weight:900;"

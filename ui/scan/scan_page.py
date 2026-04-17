@@ -1,7 +1,9 @@
 """Scan page: header + counters + history + last-rune card + best-rune card."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+import time
+
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel
 
 from models import Rune, Verdict
@@ -27,8 +29,12 @@ class ScanPage(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self._counts = {"total": 0, "kept": 0, "sold": 0, "pwrup": 0}
+        self._counts = {"total": 0, "kept": 0, "sold": 0}
         self._best_score: float = -1.0
+        self._started_at: float | None = None
+        self._timer = QTimer(self)
+        self._timer.setInterval(1000)
+        self._timer.timeout.connect(self._tick_time)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(18, 18, 18, 18)
@@ -54,7 +60,7 @@ class ScanPage(QWidget):
             main_grid.addWidget(lbl, 0, col)
 
         self._history = HistoryList()
-        main_grid.addWidget(self._history, 1, 0, 3, 1, Qt.AlignmentFlag.AlignTop)
+        main_grid.addWidget(self._history, 1, 0, 3, 1)
 
         self._last_card = RuneCard(RuneCardStatus.KEEP)
         self._last_verdict = VerdictBar()
@@ -74,6 +80,17 @@ class ScanPage(QWidget):
 
     def set_active(self, active: bool) -> None:
         self._header.set_active(active)
+        if active:
+            self._started_at = time.monotonic()
+            self._counters.update_time(0)
+            self._timer.start()
+        else:
+            self._timer.stop()
+
+    def _tick_time(self) -> None:
+        if self._started_at is None:
+            return
+        self._counters.update_time(int(time.monotonic() - self._started_at))
 
     def on_rune(self, rune: Rune, verdict: Verdict, mana: int,
                 swop: tuple[float, float], s2us: tuple[float, float],
@@ -83,8 +100,6 @@ class ScanPage(QWidget):
             self._counts["kept"] += 1
         elif verdict.decision == "SELL":
             self._counts["sold"] += 1
-        elif verdict.decision in ("PWR-UP", "POWERUP", "POWER-UP"):
-            self._counts["pwrup"] += 1
         self._counters.update_counts(**self._counts)
 
         self._history.add(rune, verdict)

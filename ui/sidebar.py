@@ -8,11 +8,11 @@ from ui import theme
 
 
 NAV_ITEMS = [
-    ("scan", "Scan"),
-    ("profile", "Profil"),
-    ("history", "Historique"),
-    ("stats", "Stats"),
-    ("settings", "Parametres"),
+    ("scan",     "\u25C9  Scan"),
+    ("settings", "\u2699  Parametres"),
+    ("history",  "\u25F7  Historique"),
+    ("stats",    "\u2261  Stats"),
+    ("profile",  "\u25CE  Profils"),
 ]
 
 
@@ -36,14 +36,14 @@ class Sidebar(QWidget):
         lay.setSpacing(4)
 
         logo = QLabel(
-            "LUCI2US<br>"
-            "<span style='font-size:9px;color:#8b6a3d;letter-spacing:3px;font-weight:400'>SW BOT</span>"
+            "Luci2US<br>"
+            "<span style='font-size:9px;color:#8b6a3d;letter-spacing:3px;font-weight:400'>SW RUNE BOT</span>"
         )
         logo.setTextFormat(Qt.TextFormat.RichText)
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo.setStyleSheet(
             f"color:{theme.COLOR_GOLD}; font-family:'{theme.FONT_TITLE}';"
-            f"font-size:20px; font-weight:800; letter-spacing:1px;"
+            f"font-size:22px; font-style:italic; font-weight:700; letter-spacing:0.5px;"
             f"padding:6px 0 22px; border-bottom:1px solid {theme.COLOR_SIDEBAR_BORDER};"
         )
         lay.addWidget(logo)

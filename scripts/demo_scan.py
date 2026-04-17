@@ -60,6 +60,7 @@ def main() -> int:
             r, v, mana=random.randint(20, 100),
             swop=(random.uniform(60, 120), random.uniform(90, 150)),
             s2us=(random.uniform(80, 140), random.uniform(110, 160)),
+            set_bonus=f"2 Set : {r.set} bonus",
         )
 
     t = QTimer()

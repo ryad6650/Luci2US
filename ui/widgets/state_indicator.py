@@ -47,7 +47,7 @@ class StateIndicator(QWidget):
         lay.setSpacing(8)
 
         self._dot = _Dot()
-        self._label = QLabel("INACTIF")
+        self._label = QLabel("IDLE")
         self._label.setStyleSheet(
             f"color:{theme.COLOR_TEXT_DIM}; font-size:12px; font-weight:600; letter-spacing:.5px;"
         )
@@ -68,7 +68,7 @@ class StateIndicator(QWidget):
         self._active = active
         if active:
             self._dot.set_color(theme.COLOR_KEEP)
-            self._label.setText("ACTIF")
+            self._label.setText("SCANNING")
             self._label.setStyleSheet(
                 f"color:{theme.COLOR_KEEP}; font-size:12px; font-weight:600; letter-spacing:.5px;"
             )
@@ -77,7 +77,7 @@ class StateIndicator(QWidget):
             self._anim.stop()
             self._dot.set_color(theme.COLOR_TEXT_DIM)
             self._dot.set_opacity(1.0)
-            self._label.setText("INACTIF")
+            self._label.setText("IDLE")
             self._label.setStyleSheet(
                 f"color:{theme.COLOR_TEXT_DIM}; font-size:12px; font-weight:600; letter-spacing:.5px;"
             )

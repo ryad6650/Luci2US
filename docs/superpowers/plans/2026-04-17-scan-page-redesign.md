@@ -539,6 +539,7 @@ Expected: FAIL.
 from __future__ import annotations
 from enum import Enum
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel
 
 from ui import theme
@@ -556,7 +557,7 @@ _LABELS = {TagKind.KEEP: "KEEP", TagKind.SELL: "SELL", TagKind.POWERUP: "PWR"}
 class TagBadge(QLabel):
     def __init__(self, kind: TagKind, parent=None) -> None:
         super().__init__(parent)
-        self.setAlignment(0x0004)  # Qt.AlignCenter fallback for static
+        self.setAlignment(Qt.AlignCenter)
         self.set_kind(kind)
 
     def set_kind(self, kind: TagKind) -> None:

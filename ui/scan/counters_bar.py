@@ -1,4 +1,4 @@
-"""4-cell counters strip: Total - Kept - Sold - PwrUp."""
+"""4-cell counters strip: Runes Scan - Keep - Sell - Time."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -53,16 +53,20 @@ class CountersBar(QFrame):
         lay.setSpacing(0)
 
         cells = [
-            _Cell("Total"), _Cell("Kept"), _Cell("Sold"),
-            _Cell("PwrUp", is_last=True),
+            _Cell("Runes Scan"), _Cell("Keep"), _Cell("Sell"),
+            _Cell("Time", is_last=True),
         ]
         for c in cells:
             lay.addWidget(c, 1)
 
-        self._total, self._kept, self._sold, self._pwr = (c.value for c in cells)
+        self._total, self._kept, self._sold, self._time = (c.value for c in cells)
+        self._time.setText("00:00")
 
-    def update_counts(self, total: int, kept: int, sold: int, pwrup: int) -> None:
+    def update_counts(self, total: int, kept: int, sold: int) -> None:
         self._total.setText(str(total))
         self._kept.setText(str(kept))
         self._sold.setText(str(sold))
-        self._pwr.setText(str(pwrup))
+
+    def update_time(self, seconds: int) -> None:
+        mm, ss = divmod(max(0, int(seconds)), 60)
+        self._time.setText(f"{mm:02d}:{ss:02d}")

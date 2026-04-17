@@ -100,14 +100,14 @@ class RuneCard(QFrame):
         outer.addWidget(body)
 
         subs_box = QWidget()
-        sl = QGridLayout(subs_box)
+        sl = QVBoxLayout(subs_box)
         sl.setContentsMargins(2, 3, 2, 6)
-        sl.setHorizontalSpacing(12)
+        sl.setSpacing(3)
         self._sub_labels: list[QLabel] = []
-        for i in range(4):
+        for _ in range(4):
             lbl = QLabel("-")
             lbl.setStyleSheet(f"color:{theme.COLOR_TEXT_SUB}; font-size:11px;")
-            sl.addWidget(lbl, i // 2, i % 2)
+            sl.addWidget(lbl)
             self._sub_labels.append(lbl)
         outer.addWidget(subs_box)
 
@@ -155,7 +155,7 @@ class RuneCard(QFrame):
         self._grade.setText(label)
         self._grade.setStyleSheet(
             f"background:{bg}; color:#f8e8c8; border:1px solid {border};"
-            f"font-weight:700; font-size:10px; padding:3px 9px; border-radius:3px;"
+            f"font-weight:700; font-size:10px; padding:1px 9px; border-radius:3px;"
         )
 
         for i, lbl in enumerate(self._sub_labels):
