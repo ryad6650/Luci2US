@@ -110,9 +110,9 @@ class BackgroundPane(QWidget):
         p.setPen(pen2)
         p.drawEllipse(QRectF(r.width() - 220, r.height() - 220, 320, 320))
 
-        # Runic symbols (big translucent glyphs)
+        # Runic symbols (Elder Futhark) — big translucent glyphs, mirror v13 .rune-sym
         p.setFont(QFont("Georgia", 90, QFont.Bold))
         p.setPen(QColor(232, 176, 64, 10))
-        p.drawText(30, 110, "Ж")
+        p.drawText(20, 110, "\u16DF")      # ᛟ (Othala) top-left
         p.setPen(QColor(200, 80, 40, 13))
-        p.drawText(r.width() - 140, r.height() - 30, "§")
+        p.drawText(r.width() - 130, r.height() - 20, "\u16B1")  # ᚱ (Raido) bottom-right
