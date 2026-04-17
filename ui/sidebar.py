@@ -8,11 +8,13 @@ from ui import theme
 
 
 NAV_ITEMS = [
-    ("scan",     "\u25C9  Scan"),
-    ("settings", "\u2699  Parametres"),
-    ("history",  "\u25F7  Historique"),
-    ("stats",    "\u2261  Stats"),
-    ("profile",  "\u25CE  Profils"),
+    ("scan",          "\u25C9  Scan"),
+    ("filters",       "\u25A3  Filtres"),
+    ("runes",         "\u2726  Runes"),
+    ("monsters",      "\u2618  Monstres"),
+    ("stats_history", "\u2261  Stats & Historique"),
+    ("profile",       "\u25CE  Profils"),
+    ("settings",      "\u2699  Parametres"),
 ]
 
 
