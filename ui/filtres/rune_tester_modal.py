@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QListWidget, QPushButton, QRadioButton, QSpinBox, QVBoxLayout, QWidget,
 )
 
-from models import Rune, SubStat
+from models import GEM_MAX, GRIND_MAX, Rune, SubStat
 from rune_optimizer import best_plus0, best_now, filters_that_match
 from s2us_filter import S2USFilter
 from ui import theme
@@ -85,7 +85,7 @@ class RuneTesterModal(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Rune Optimizer")
-        self.resize(620, 680)
+        self.resize(820, 720)
         self.setStyleSheet(_MODAL_QSS)
         self._filters = filters or []
 
@@ -329,34 +329,45 @@ class RuneTesterModal(QDialog):
             ancient=(self._class_combo.currentText() == "Ancient"),
         )
 
-    def _describe_changes(
+    def _sub_breakdown(
         self, orig: Rune, opt: Rune, grind: int, gem: int,
-    ) -> str:
-        lines: list[str] = []
-        if gem > 0:
-            gemmed_idx: int | None = None
-            gemmed_type: str | None = None
-            for i, s in enumerate(opt.substats):
-                if i >= len(orig.substats):
-                    gemmed_idx, gemmed_type = i + 1, s.type
-                    break
-                if orig.substats[i].type != s.type:
-                    gemmed_idx, gemmed_type = i + 1, s.type
-                    break
-            if gemmed_idx is not None and gemmed_type is not None:
-                disp = _FR_TO_DISPLAY.get(gemmed_type, gemmed_type)
-                lines.append(
-                    f"Gemme {_GRIND_LABELS[gem]} : {disp} (sub #{gemmed_idx})"
-                )
-            else:
-                lines.append(
-                    f"Gemme {_GRIND_LABELS[gem]} : aucune amelioration retenue"
-                )
-        if grind > 0:
-            lines.append(
-                f"Meule {_GRIND_LABELS[grind]} : appliquee sur les subs grindables"
+    ) -> list[str]:
+        """Un hint par sub optimisée : Rolls / Gemme / Meule / Final."""
+        out: list[str] = []
+        for i, s in enumerate(opt.substats):
+            fr = s.type
+            final = int(s.value)
+            grind_val = (
+                GRIND_MAX.get(fr, [0, 0, 0, 0])[grind] if grind > 0 else 0
             )
-        return "\n".join(lines)
+            gem_val = 0
+            rolls_val = 0
+
+            if i < len(orig.substats) and orig.substats[i].type == fr:
+                rolls_val = final - int(orig.substats[i].value) - grind_val
+            elif i < len(orig.substats) and orig.substats[i].type != fr:
+                gem_val = GEM_MAX.get(fr, [0, 0, 0, 0])[gem] if gem > 0 else 0
+            else:
+                expected_gem = (
+                    GEM_MAX.get(fr, [0, 0, 0, 0])[gem] if gem > 0 else 0
+                )
+                if expected_gem > 0 and final - grind_val == expected_gem:
+                    gem_val = expected_gem
+                else:
+                    rolls_val = final - grind_val
+
+            rolls_val = max(0, rolls_val)
+            parts: list[str] = []
+            if gem_val > 0:
+                parts.append(f"Gemme +{gem_val}")
+            if rolls_val > 0:
+                parts.append(f"Rolls +{rolls_val}")
+            if grind_val > 0:
+                parts.append(f"Meule +{grind_val}")
+            parts.append(f"Final {final}")
+            disp = _FR_TO_DISPLAY.get(fr, fr)
+            out.append(f"\u2192 {disp} : " + ", ".join(parts))
+        return out
 
     def _on_optimize(self) -> None:
         rune = self._read_rune()
@@ -374,16 +385,13 @@ class RuneTesterModal(QDialog):
         self._eff_current.setText(f"{current_eff}")
         self._eff_projected.setText(f"{int(result.efficiency)}")
 
-        subs_txt = ", ".join(
-            f"{_FR_TO_DISPLAY.get(s.type, s.type)} {int(s.value)}"
-            for s in result.rune.substats
+        breakdown = self._sub_breakdown(rune, result.rune, grind, gem)
+        for i, lbl in enumerate(self._sub_hint):
+            lbl.setText(breakdown[i] if i < len(breakdown) else "")
+
+        self._result_label.setText(
+            f"{mode}  (Eff1 {current_eff} \u2192 {int(result.efficiency)})"
         )
-        changes_txt = self._describe_changes(rune, result.rune, grind, gem)
-        header = f"{mode}  (Eff1 {current_eff} \u2192 {int(result.efficiency)})"
-        parts = [header, subs_txt]
-        if changes_txt:
-            parts.append(changes_txt)
-        self._result_label.setText("\n".join(parts))
 
         self._filters_list.clear()
         for f in filters_that_match(result.rune, self._filters):
