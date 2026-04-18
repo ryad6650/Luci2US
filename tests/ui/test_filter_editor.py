@@ -151,3 +151,70 @@ def test_innate_grid_roundtrip(qapp):
     e._innate_checks["CD"].setChecked(True)
     g = e.current_filter()
     assert g.innate_required.get("CD") is True
+
+
+def test_sub_rows_created_for_every_stat_key(qapp):
+    from s2us_filter import _STAT_KEYS
+    e = FilterEditor()
+    e.load_filter(_mk())
+    for key in _STAT_KEYS:
+        assert key in e._sub_rows
+
+
+def test_sub_state_button_cycles_ignored_mandatory_optional(qapp):
+    e = FilterEditor()
+    e.load_filter(_mk())
+    row = e._sub_rows["SPD"]
+    assert row.state == 0
+    row.state_btn.click()
+    assert row.state == 1
+    row.state_btn.click()
+    assert row.state == 2
+    row.state_btn.click()
+    assert row.state == 0
+
+
+def test_load_filter_populates_sub_state_and_threshold(qapp):
+    e = FilterEditor()
+    f = _mk()
+    f.sub_requirements = {"SPD": 1, "CR": 2}
+    f.min_values = {"SPD": 12, "CR": 6}
+    e.load_filter(f)
+    assert e._sub_rows["SPD"].state == 1
+    assert e._sub_rows["CR"].state == 2
+    assert e._sub_rows["SPD"].threshold.value() == 12
+    assert e._sub_rows["CR"].threshold.value() == 6
+
+
+def test_threshold_slider_and_spin_synchronized(qapp):
+    e = FilterEditor()
+    e.load_filter(_mk())
+    row = e._sub_rows["SPD"]
+    row.slider.setValue(20)
+    assert row.threshold.value() == 20
+    row.threshold.setValue(15)
+    assert row.slider.value() == 15
+
+
+def test_current_filter_writes_sub_reqs_and_min_values(qapp):
+    e = FilterEditor()
+    e.load_filter(_mk())
+    e._sub_rows["SPD"].set_state(1)
+    e._sub_rows["SPD"].threshold.setValue(12)
+    e._sub_rows["CR"].set_state(2)
+    e._sub_rows["CR"].threshold.setValue(6)
+    f = e.current_filter()
+    assert f.sub_requirements["SPD"] == 1
+    assert f.sub_requirements["CR"] == 2
+    assert f.min_values["SPD"] == 12
+    assert f.min_values["CR"] == 6
+
+
+def test_optional_count_radio_group(qapp):
+    e = FilterEditor()
+    f = _mk()
+    f.optional_count = 3
+    e.load_filter(f)
+    assert e._optional_group.checkedId() == 3
+    e._optional_group.button(2).setChecked(True)
+    assert e.current_filter().optional_count == 2

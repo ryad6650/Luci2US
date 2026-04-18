@@ -11,8 +11,9 @@ from dataclasses import replace
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QButtonGroup, QCheckBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QLineEdit, QRadioButton, QScrollArea, QSlider, QVBoxLayout, QWidget,
+    QButtonGroup, QCheckBox, QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout,
+    QLabel, QLineEdit, QPushButton, QRadioButton, QScrollArea, QSizePolicy,
+    QSlider, QVBoxLayout, QWidget,
 )
 
 from models import SETS_FR, SET_FR_TO_EN
@@ -51,6 +52,7 @@ class FilterEditor(QWidget):
         self._build_ancient()
         self._build_main_stats()
         self._build_innate()
+        self._build_subs()
 
         self._inner_lay.addStretch()
 
@@ -161,6 +163,34 @@ class FilterEditor(QWidget):
             grid.addWidget(cb, i // 4, i % 4)
         box.addLayout(grid)
 
+    def _build_subs(self) -> None:
+        _, box = self._framed_block("Sous-proprietes")
+        container = QHBoxLayout()
+        rows_box = QVBoxLayout()
+        rows_box.setSpacing(2)
+        self._sub_rows: dict[str, _SubRow] = {}
+        for key in _STAT_KEYS:
+            row = _SubRow(key)
+            self._sub_rows[key] = row
+            rows_box.addWidget(row)
+        container.addLayout(rows_box, 1)
+
+        side = QVBoxLayout()
+        side.setSpacing(4)
+        lbl = QLabel("Facultatives requises")
+        lbl.setStyleSheet(f"color:{theme.COLOR_GOLD};")
+        side.addWidget(lbl)
+        self._optional_group = QButtonGroup(self)
+        for n in (1, 2, 3, 4):
+            rb = QRadioButton(str(n))
+            rb.setStyleSheet(f"QRadioButton {{ color:{theme.COLOR_TEXT_MAIN}; }}")
+            self._optional_group.addButton(rb, n)
+            side.addWidget(rb)
+        side.addStretch()
+        container.addLayout(side)
+
+        box.addLayout(container)
+
     def _build_header(self) -> None:
         row = QHBoxLayout()
         row.setSpacing(12)
@@ -244,10 +274,23 @@ class FilterEditor(QWidget):
         for key, cb in self._innate_checks.items():
             cb.setChecked(bool(f.innate_required.get(key)))
 
+        for key, row in self._sub_rows.items():
+            row.set_state(int(f.sub_requirements.get(key, 0)))
+            row.threshold.setValue(float(f.min_values.get(key, 0)))
+        n = int(f.optional_count or 0)
+        btn = self._optional_group.button(n)
+        if btn is not None:
+            btn.setChecked(True)
+
     def current_filter(self) -> S2USFilter:
         base = self._current or S2USFilter(name="", sub_requirements={}, min_values={})
         aid = self._ancient_group.checkedId()
         ancient = {1: "Ancient", 2: "NotAncient"}.get(aid, "")
+        sub_requirements = {k: r.state for k, r in self._sub_rows.items()}
+        min_values = {k: int(r.threshold.value()) for k, r in self._sub_rows.items()}
+        optional_count = self._optional_group.checkedId()
+        if optional_count < 0:
+            optional_count = 0
         return replace(
             base,
             name=self._name_edit.text(),
@@ -268,4 +311,64 @@ class FilterEditor(QWidget):
             main_stats={k: cb.isChecked() for k, cb in self._main_checks.items()},
             innate_required={k: cb.isChecked() for k, cb in self._innate_checks.items()
                               if cb.isChecked()},
+            sub_requirements=sub_requirements,
+            min_values=min_values,
+            optional_count=optional_count,
         )
+
+
+_STATE_GLYPHS = {0: "\u2610", 1: "\u2611", 2: "\u2796"}
+
+
+class _SubRow(QWidget):
+    """Une ligne substat : bouton etat + label + spinbox seuil + slider."""
+
+    def __init__(self, key: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.key = key
+        self.state = 0
+
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+
+        self.state_btn = QPushButton(_STATE_GLYPHS[0])
+        self.state_btn.setFixedWidth(30)
+        self.state_btn.clicked.connect(self._cycle)
+        row.addWidget(self.state_btn)
+
+        self.label = QLabel(key)
+        self.label.setStyleSheet(f"color:{theme.COLOR_TEXT_MAIN};")
+        self.label.setFixedWidth(60)
+        row.addWidget(self.label)
+
+        self.threshold = QDoubleSpinBox()
+        self.threshold.setRange(0, 9999)
+        self.threshold.setDecimals(0)
+        self.threshold.setFixedWidth(70)
+        row.addWidget(self.threshold)
+
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.setRange(0, 60)
+        self.slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        row.addWidget(self.slider, 1)
+
+        self.slider.valueChanged.connect(self._on_slider_changed)
+        self.threshold.valueChanged.connect(self._on_threshold_changed)
+
+    def _on_slider_changed(self, v: int) -> None:
+        self.threshold.blockSignals(True)
+        self.threshold.setValue(v)
+        self.threshold.blockSignals(False)
+
+    def _on_threshold_changed(self, v: float) -> None:
+        self.slider.blockSignals(True)
+        self.slider.setValue(int(v))
+        self.slider.blockSignals(False)
+
+    def _cycle(self) -> None:
+        self.set_state((self.state + 1) % 3)
+
+    def set_state(self, s: int) -> None:
+        self.state = s
+        self.state_btn.setText(_STATE_GLYPHS[s])
