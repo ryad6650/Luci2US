@@ -79,24 +79,8 @@ def _rune_key(rune: Rune) -> tuple:
     return (rune.level, subs)
 
 
-def _apply_power_up(rune: Rune) -> list[Rune]:
-    """Étape 1: applique toutes les distributions de rolls de power-up sur les
-    subs existantes. Rolls sur un bucket sans sub sont perdus (comportement bot)."""
-    rolls = _rolls_remaining(rune.grade, rune.level)
-    variants: list[Rune] = []
-    for dist in _distribute(rolls, 4):
-        v = copy.deepcopy(rune)
-        v.level = 12
-        for i in range(len(v.substats)):
-            if dist[i] > 0:
-                sub = v.substats[i]
-                sub.value += dist[i] * _max_roll(sub.type, v.stars)
-        variants.append(v)
-    return variants
-
-
 def _add_missing_subs(rune: Rune) -> list[Rune]:
-    """Étape 2: complète à 4 subs en testant toutes stats candidates.
+    """Étape 1: complète à 4 subs en testant toutes stats candidates.
     Nouvelles subs ont valeur initiale = 1 × max_roll (multiplier=1, cf. bot)."""
     missing = 4 - len(rune.substats)
     if missing <= 0:
@@ -115,32 +99,56 @@ def _add_missing_subs(rune: Rune) -> list[Rune]:
     return variants
 
 
-def _apply_gem(runes: list[Rune], gem_grade: int) -> list[Rune]:
-    """Étape 3: pour chaque variante, ajoute N variantes gemmées (une gem max
-    par slot/stat candidate possible). Les runes non-gemmées restent présentes."""
+def _apply_power_up(rune: Rune, excluded: set[int] | None = None) -> list[Rune]:
+    """Étape 2: applique toutes les distributions de rolls de power-up sur les
+    subs éligibles. Doit être appelé APRÈS _add_missing_subs pour que le 4ème
+    sub participe aux rolls (sinon il reste figé à 1 × max_roll).
+
+    `excluded` : indices de subs gemmés (valeur fixée par la gemme, ne reçoit
+    aucun roll — règle SW confirmée par user 2026-04-18)."""
+    rolls = _rolls_remaining(rune.grade, rune.level)
+    skip = excluded or set()
+    eligible = [i for i in range(len(rune.substats)) if i not in skip]
+    variants: list[Rune] = []
+    if not eligible:
+        v = copy.deepcopy(rune)
+        v.level = 12
+        return [v]
+    for dist in _distribute(rolls, len(eligible)):
+        v = copy.deepcopy(rune)
+        v.level = 12
+        for k, idx in enumerate(eligible):
+            if dist[k] > 0:
+                sub = v.substats[idx]
+                sub.value += dist[k] * _max_roll(sub.type, v.stars)
+        variants.append(v)
+    return variants
+
+
+def _gem_variants(rune: Rune, gem_grade: int) -> list[tuple[Rune, int]]:
+    """Étape 3 : génère les variantes gemmées AVANT power-up (la gemme fixe
+    la valeur du sub et interdit les rolls dessus). Renvoie `(rune, idx)` où
+    `idx` est le sub à exclure de la distribution des rolls."""
     if gem_grade <= 0:
-        return runes
-    result: list[Rune] = list(runes)
-    for rune in runes:
-        for i in range(len(rune.substats)):
-            # Les candidates incluent les stats non présentes ailleurs ; la stat
-            # actuelle du slot est autorisée (le bot permet de gemmer la même).
-            forbidden = {rune.main_stat.type}
-            if rune.prefix:
-                forbidden.add(rune.prefix.type)
-            for j, sub in enumerate(rune.substats):
-                if j != i:
-                    forbidden.add(sub.type)
-            for stat in _ALL_SUB_STATS:
-                if stat in forbidden:
-                    continue
-                gem_val = GEM_MAX.get(stat, [0, 0, 0, 0])[gem_grade]
-                if gem_val <= 0:
-                    continue
-                new_v = copy.deepcopy(rune)
-                new_v.substats[i] = SubStat(type=stat, value=gem_val)
-                result.append(new_v)
-    return result
+        return []
+    out: list[tuple[Rune, int]] = []
+    for i in range(len(rune.substats)):
+        forbidden = {rune.main_stat.type}
+        if rune.prefix:
+            forbidden.add(rune.prefix.type)
+        for j, sub in enumerate(rune.substats):
+            if j != i:
+                forbidden.add(sub.type)
+        for stat in _ALL_SUB_STATS:
+            if stat in forbidden:
+                continue
+            gem_val = GEM_MAX.get(stat, [0, 0, 0, 0, 0])[gem_grade]
+            if gem_val <= 0:
+                continue
+            new_v = copy.deepcopy(rune)
+            new_v.substats[i] = SubStat(type=stat, value=gem_val)
+            out.append((new_v, i))
+    return out
 
 
 def _apply_grind(runes: list[Rune], grind_grade: int) -> list[Rune]:
@@ -149,7 +157,7 @@ def _apply_grind(runes: list[Rune], grind_grade: int) -> list[Rune]:
         return runes
     for rune in runes:
         for sub in rune.substats:
-            bonus = GRIND_MAX.get(sub.type, [0, 0, 0, 0])[grind_grade]
+            bonus = GRIND_MAX.get(sub.type, [0, 0, 0, 0, 0])[grind_grade]
             if bonus > 0:
                 sub.value += bonus
     return runes
@@ -173,21 +181,22 @@ def project_to_plus12(
 ) -> list[Rune]:
     """Reproduit le pipeline du bot (-.18.cs lignes 1192-1694) :
 
-    1. Power-up : applique toutes les distributions possibles de rolls restants
-       sur les subs existantes.
-    2. Ajoute les subs manquantes (toutes stats candidates, valeur = 1 max roll).
-    3. Gemme : variantes supplémentaires avec une sub remplacée par gem_max.
+    1. Ajoute les subs manquantes (toutes stats candidates, valeur = 1 max roll).
+    2. Branche sans gemme : power-up distribue les rolls sur les 4 subs.
+    3. Branche avec gemme : pour chaque slot × stat gemmable, pose la gemme
+       AVANT le power-up et exclut ce slot des rolls (règle SW).
     4. Meule : ajoute grind_max à chaque sub grindable (in place).
     5. Dédup.
 
     Retourne la liste de toutes les variantes possibles à +12.
     """
-    powered = _apply_power_up(rune)
-    completed: list[Rune] = []
-    for v in powered:
-        completed.extend(_add_missing_subs(v))
-    gemmed = _apply_gem(completed, gem_grade)
-    grinded = _apply_grind(gemmed, grind_grade)
+    completed = _add_missing_subs(rune)
+    all_variants: list[Rune] = []
+    for v in completed:
+        all_variants.extend(_apply_power_up(v))
+        for gemmed, idx in _gem_variants(v, gem_grade):
+            all_variants.extend(_apply_power_up(gemmed, excluded={idx}))
+    grinded = _apply_grind(all_variants, grind_grade)
     return _dedup(grinded)
 
 

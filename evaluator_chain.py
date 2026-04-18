@@ -79,9 +79,15 @@ def evaluate_chain(rune: Rune, config: dict) -> Verdict:
 
     filters, settings = _get_filters(config)
 
-    evaluable = [f for f in filters if f.enabled and should_evaluate_now(rune, f, settings)]
+    enabled = [f for f in filters if f.enabled]
+    evaluable = [f for f in enabled if should_evaluate_now(rune, f, settings)]
+    pending_smart = [
+        f for f in enabled
+        if f not in evaluable and (f.level == -1 or rune.level < 12)
+    ]
+
     if not evaluable:
-        if any(f.enabled for f in filters):
+        if pending_smart:
             return Verdict(
                 decision="POWER-UP",
                 source="s2us",
@@ -98,6 +104,16 @@ def evaluate_chain(rune: Rune, config: dict) -> Verdict:
         )
 
     verdict = evaluate_s2us(rune, evaluable, settings)
+    # Si aucun filtre évaluable n'a matché mais des filtres Smart attendent
+    # encore un checkpoint futur, ne pas vendre prématurément.
+    if verdict.decision == "SELL" and pending_smart:
+        verdict = Verdict(
+            decision="POWER-UP",
+            source="s2us",
+            reason="Attente checkpoint",
+            score=details["eff_swop"],
+            details=details,
+        )
     verdict.details = details
     verdict.score = details["eff_swop"]
     return verdict

@@ -47,12 +47,15 @@ def serialize_filter(f: S2USFilter) -> dict:
     for k in _MAIN_KEYS:
         raw[k] = 1 if f.main_stats.get(k) else 0
 
+    # Flags natifs bot (préservent la compat : "Tous" = (1,0) comme le bot).
+    # Marqueur `_AncientMode` pour un round-trip Luci2US ↔ Luci2US sans perte.
     if f.ancient_type == "Ancient":
         raw["Ancient"], raw["Normal"] = 1, 0
     elif f.ancient_type == "NotAncient":
         raw["Ancient"], raw["Normal"] = 0, 1
     else:
-        raw["Ancient"], raw["Normal"] = 0, 0
+        raw["Ancient"], raw["Normal"] = 1, 0
+    raw["_AncientMode"] = f.ancient_type
 
     for k in _STAT_KEYS:
         raw[f"Sub{k}"] = int(f.sub_requirements.get(k, 0))

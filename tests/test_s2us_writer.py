@@ -27,8 +27,8 @@ def _make_minimal_filter(name: str = "SPD CR CD ACC") -> S2USFilter:
         level=4,
         efficiency=80.0,
         eff_method="S2US",
-        grind=3,
-        gem=3,
+        grind=4,
+        gem=4,
         powerup_mandatory=0,
         powerup_optional=0,
         innate_required={},
@@ -83,16 +83,20 @@ def test_serialize_filter_writes_ancient_flags():
     raw = serialize_filter(f)
     assert raw["Ancient"] == 1
     assert raw["Normal"] == 0
+    assert raw["_AncientMode"] == "Ancient"
 
     f.ancient_type = "NotAncient"
     raw = serialize_filter(f)
     assert raw["Ancient"] == 0
     assert raw["Normal"] == 1
+    assert raw["_AncientMode"] == "NotAncient"
 
+    # "Tous" : même empreinte binaire que le bot (1,0) + marqueur vide.
     f.ancient_type = ""
     raw = serialize_filter(f)
-    assert raw["Ancient"] == 0
+    assert raw["Ancient"] == 1
     assert raw["Normal"] == 0
+    assert raw["_AncientMode"] == ""
 
 
 def test_serialize_filter_innate_flag_and_specifics():

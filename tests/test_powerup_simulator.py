@@ -105,15 +105,17 @@ class TestApplyPowerUp:
         max_vit = max(v.substats[0].value for v in variants)
         assert max_vit == 6 + 4 * ROLL_MAX_6["VIT"]
 
-    def test_hero_plus0_generates_20_variants(self):
-        """Hero +0 → 3 rolls sur 4 buckets = 20 distribs."""
+    def test_hero_plus0_generates_10_variants_on_3subs(self):
+        """Hero +0 avec 3 subs → 3 rolls sur 3 buckets = C(3+3-1,3-1) = 10.
+        Le pipeline réel complète à 4 subs via `_add_missing_subs` en amont ;
+        ici on teste `_apply_power_up` isolément."""
         subs = [
             SubStat(type="VIT", value=6),
             SubStat(type="PV%", value=6),
             SubStat(type="DEF%", value=7),
         ]
         rune = _make_rune(grade="Heroique", level=0, substats=subs)
-        assert len(_apply_power_up(rune)) == 20
+        assert len(_apply_power_up(rune)) == 10
 
 
 class TestProjectToPlus12:
@@ -172,7 +174,7 @@ class TestProjectToPlus12:
         subs = [SubStat(type="CC", value=5), SubStat(type="DC", value=6),
                 SubStat(type="PV%", value=6), SubStat(type="ATQ%", value=5)]
         rune = _make_rune(grade="Legendaire", level=12, substats=subs)
-        variants = project_to_plus12(rune, grind_grade=3)
+        variants = project_to_plus12(rune, grind_grade=4)
         for v in variants:
             for s in v.substats:
                 if s.type == "CC":

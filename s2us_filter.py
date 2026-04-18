@@ -282,15 +282,19 @@ def _parse_filter(raw: dict) -> S2USFilter:
     ]
     main_stats = {k: bool(raw.get(k, 0)) for k in main_keys}
 
-    # Ancient type
-    ancient = bool(raw.get("Ancient", 0))
-    normal = bool(raw.get("Normal", 0))
-    if ancient and not normal:
-        ancient_type = "Ancient"
-    elif normal and not ancient:
-        ancient_type = "NotAncient"
+    # Ancient type — marqueur Luci2US prioritaire (round-trip fiable), sinon
+    # heuristique bot-compat : le bot écrit (Ancient=1,Normal=0) par défaut pour
+    # "Tous", donc seul (0,1) signifie explicitement "NotAncient".
+    if "_AncientMode" in raw:
+        mode = raw.get("_AncientMode", "")
+        ancient_type = mode if mode in ("Ancient", "NotAncient") else ""
     else:
-        ancient_type = ""
+        ancient = bool(raw.get("Ancient", 0))
+        normal = bool(raw.get("Normal", 0))
+        if normal and not ancient:
+            ancient_type = "NotAncient"
+        else:
+            ancient_type = ""
 
     # Sous-stats
     sub_reqs = {k: raw.get(f"Sub{k}", 0) for k in _STAT_KEYS}
@@ -574,8 +578,13 @@ def match_filter_smart(
     if f.level != -1:
         return match_filter(rune, f)
 
+    # Filter flags → tier index dans GRIND_MAX/GEM_MAX (0=Normal … 4=Légendaire)
+    # Spec bot : Grind 0=off/1=on, Gem 0=off/1=medium/2=full.
+    grind_tier = 4 if f.grind >= 1 else 0
+    gem_tier = {0: 0, 1: 3, 2: 4}.get(f.gem, 0)
+
     variants = project_to_plus12(
-        rune, grind_grade=f.grind, gem_grade=f.gem,
+        rune, grind_grade=grind_tier, gem_grade=gem_tier,
     )
     return any(match_filter(v, f) for v in variants)
 
