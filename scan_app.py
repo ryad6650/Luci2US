@@ -16,6 +16,8 @@ from PySide6.QtWidgets import QApplication
 
 from auto_mode import AutoMode, State
 from models import Rune, Verdict
+from profile_loader import load_profile_from_dict
+from profile_store import save_profile_payload
 from ui.main_window import MainWindow
 
 
@@ -92,24 +94,45 @@ def main() -> int:
     w = MainWindow()
     w.show()
 
-    def on_rune_processed(rune: Rune, verdict: Verdict) -> None:
+    def _payload(rune: Rune, verdict: Verdict) -> tuple:
         d = verdict.details or {}
         swop = (float(d.get("eff_swop", 0)), float(d.get("max_swop", 0)))
         s2us = (float(d.get("eff_s2us", 0)), float(d.get("max_s2us", 0)))
+        mana = _estimate_mana(rune) if verdict.decision == "SELL" else 0
+        return mana, swop, s2us, _SET_BONUS.get(rune.set, "")
+
+    def on_rune_processed(rune: Rune, verdict: Verdict) -> None:
+        mana, swop, s2us, set_bonus = _payload(rune, verdict)
         w.controller.push_from_worker(
-            rune, verdict,
-            mana=_estimate_mana(rune) if verdict.decision == "SELL" else 0,
-            swop=swop, s2us=s2us,
-            set_bonus=_SET_BONUS.get(rune.set, ""),
+            rune, verdict, mana=mana, swop=swop, s2us=s2us, set_bonus=set_bonus,
+        )
+
+    def on_rune_upgraded(rune: Rune, verdict: Verdict) -> None:
+        mana, swop, s2us, set_bonus = _payload(rune, verdict)
+        w.controller.push_upgrade(
+            rune, verdict, mana=mana, swop=swop, s2us=s2us, set_bonus=set_bonus,
         )
 
     def on_state_change(state: State) -> None:
         w.controller.notify_state(state in (State.SCANNING, State.ANALYZING))
 
+    def on_profile_loaded(payload: dict) -> None:
+        try:
+            save_profile_payload(payload)
+        except OSError:
+            pass
+        try:
+            profile = load_profile_from_dict(payload)
+        except Exception:
+            return
+        w.controller.push_profile(profile, "")
+
     mode = AutoMode(
         config=cfg,
         on_state_change=on_state_change,
         on_rune_processed=on_rune_processed,
+        on_rune_upgraded=on_rune_upgraded,
+        on_profile_loaded=on_profile_loaded,
     )
 
     def toggle_mode() -> None:

@@ -1,6 +1,8 @@
 """Modale Rune Optimizer : saisie d'une rune + sortie optimale + filtres matches."""
 from __future__ import annotations
 
+import random
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QHBoxLayout, QLabel,
@@ -8,7 +10,12 @@ from PySide6.QtWidgets import (
 )
 
 from models import GEM_MAX, GRIND_MAX, Rune, SubStat
-from rune_optimizer import best_plus0, best_now, filters_that_match
+from rune_optimizer import (
+    best_plus0,
+    best_now,
+    best_tied_variants,
+    filters_that_match,
+)
 from s2us_filter import S2USFilter
 from ui import theme
 
@@ -29,7 +36,7 @@ _SETS = ["Violent", "Swift", "Despair", "Will", "Rage", "Fatal",
          "Determination", "Enhance", "Accuracy", "Tolerance",
          "Intangible", "Seal", "Shield"]
 _GRADES = ["Rare", "Heroique", "Legendaire"]
-_GRIND_LABELS = ["Aucune", "Magique", "Rare", "Legendaire"]
+_GRIND_LABELS = ["Aucune", "Magique", "Rare", "Heroique", "Legendaire"]
 _CLASSES = ["Normal", "Ancient"]
 
 
@@ -88,6 +95,8 @@ class RuneTesterModal(QDialog):
         self.resize(820, 720)
         self.setStyleSheet(_MODAL_QSS)
         self._filters = filters or []
+        self._tied_cache_key: tuple | None = None
+        self._tied_variants: list[Rune] = []
 
         root = QVBoxLayout(self)
         root.setContentsMargins(14, 12, 14, 12)
@@ -174,12 +183,12 @@ class RuneTesterModal(QDialog):
         lbl_g.setStyleSheet(f"color:{theme.COLOR_GOLD}; font-weight:600;")
         self._grind_combo = QComboBox()
         self._grind_combo.addItems(_GRIND_LABELS)
-        self._grind_combo.setCurrentIndex(3)
+        self._grind_combo.setCurrentIndex(4)
         lbl_m = QLabel("Gemme :")
         lbl_m.setStyleSheet(f"color:{theme.COLOR_GOLD}; font-weight:600;")
         self._gem_combo = QComboBox()
         self._gem_combo.addItems(_GRIND_LABELS)
-        self._gem_combo.setCurrentIndex(3)
+        self._gem_combo.setCurrentIndex(4)
         opt_row.addWidget(lbl_g)
         opt_row.addWidget(self._grind_combo)
         opt_row.addSpacing(10)
@@ -402,19 +411,25 @@ class RuneTesterModal(QDialog):
             fr = s.type
             final = int(s.value)
             grind_val = (
-                GRIND_MAX.get(fr, [0, 0, 0, 0])[grind] if grind > 0 else 0
+                GRIND_MAX.get(fr, [0, 0, 0, 0, 0])[grind] if grind > 0 else 0
             )
             gem_val = 0
             rolls_val = 0
 
+            expected_gem = (
+                GEM_MAX.get(fr, [0, 0, 0, 0, 0])[gem] if gem > 0 else 0
+            )
             if i < len(orig.substats) and orig.substats[i].type == fr:
-                rolls_val = final - int(orig.substats[i].value) - grind_val
+                # Gemme même-stat : _apply_gem écrase l'orig, donc si la valeur
+                # correspond exactement à gem_val + grind c'est une gemme, pas
+                # des rolls (sinon branche 1 afficherait un roll fantôme).
+                if expected_gem > 0 and final - grind_val == expected_gem:
+                    gem_val = expected_gem
+                else:
+                    rolls_val = final - int(orig.substats[i].value) - grind_val
             elif i < len(orig.substats) and orig.substats[i].type != fr:
-                gem_val = GEM_MAX.get(fr, [0, 0, 0, 0])[gem] if gem > 0 else 0
+                gem_val = expected_gem
             else:
-                expected_gem = (
-                    GEM_MAX.get(fr, [0, 0, 0, 0])[gem] if gem > 0 else 0
-                )
                 if expected_gem > 0 and final - grind_val == expected_gem:
                     gem_val = expected_gem
                 else:
@@ -433,34 +448,62 @@ class RuneTesterModal(QDialog):
             out.append(f"\u2192 {disp} : " + ", ".join(parts))
         return out
 
+    @staticmethod
+    def _source_cache_key(rune: Rune, grind: int, gem: int) -> tuple:
+        """Identifie la rune source + grades pour invalider le cache tied."""
+        subs_key = tuple(
+            (s.type, float(s.value), float(s.grind_value))
+            for s in rune.substats
+        )
+        prefix_key = (
+            (rune.prefix.type, float(rune.prefix.value))
+            if rune.prefix is not None else None
+        )
+        return (
+            rune.set, int(rune.slot), int(rune.stars), rune.grade,
+            int(rune.level), rune.main_stat.type, prefix_key,
+            subs_key, bool(rune.ancient), int(grind), int(gem),
+        )
+
     def _on_optimize(self) -> None:
+        from s2us_filter import calculate_efficiency1
         rune = self._read_rune()
         grind = self._grind_combo.currentIndex()
         gem = self._gem_combo.currentIndex()
-        if rune.level < 12:
-            result = best_plus0(rune, max_grind_grade=grind, max_gem_grade=gem)
-            mode = "Config future optimale (+12)"
-        else:
-            result = best_now(rune, grind_grade=grind, gem_grade=gem)
-            mode = "Meilleure amelioration immediate"
+
+        key = self._source_cache_key(rune, grind, gem)
+        if key != self._tied_cache_key:
+            self._tied_variants = best_tied_variants(
+                rune, grind_grade=grind, gem_grade=gem,
+            )
+            self._tied_cache_key = key
+
+        picked = (
+            random.choice(self._tied_variants)
+            if self._tied_variants else rune
+        )
+        mode = (
+            "Config future optimale (+12)" if rune.level < 12
+            else "Meilleure amelioration immediate"
+        )
 
         self._eff_current.setText("Actuelle : " + self._format_eff_triplet(rune))
         self._eff_projected.setText(
-            "+12 optimal : " + self._format_eff_triplet(result.rune)
+            "+12 optimal : " + self._format_eff_triplet(picked)
         )
 
-        breakdown = self._sub_breakdown(rune, result.rune, grind, gem)
+        breakdown = self._sub_breakdown(rune, picked, grind, gem)
         for i, lbl in enumerate(self._sub_hint):
             lbl.setText(breakdown[i] if i < len(breakdown) else "")
 
-        from s2us_filter import calculate_efficiency1
         current_eff = int(calculate_efficiency1(rune))
+        projected_eff = int(calculate_efficiency1(picked))
         self._result_label.setText(
-            f"{mode}  (Eff1 {current_eff} \u2192 {int(result.efficiency)})"
+            f"{mode}  (Eff1 {current_eff} \u2192 {projected_eff})"
         )
 
         self._filters_list.clear()
-        for f in filters_that_match(result.rune, self._filters):
+        for f in filters_that_match(picked, self._filters):
             self._filters_list.addItem(
                 f"{f.name}  (Eff\u2265{int(f.efficiency)})"
             )

@@ -68,20 +68,20 @@ def test_best_variant_at_plus12_zero_materials_returns_same_rune_eff():
 def test_best_variant_higher_with_grind_than_without():
     r = _rune_plus12_legend()
     low = best_variant(r, grind_grade=0, gem_grade=0)
-    high = best_variant(r, grind_grade=3, gem_grade=0)
+    high = best_variant(r, grind_grade=4, gem_grade=0)
     assert high.efficiency >= low.efficiency
 
 
 def test_best_variant_higher_with_gem_than_without():
     r = _rune_plus12_legend()
     low = best_variant(r, grind_grade=0, gem_grade=0)
-    high = best_variant(r, grind_grade=0, gem_grade=3)
+    high = best_variant(r, grind_grade=0, gem_grade=4)
     assert high.efficiency >= low.efficiency
 
 
 def test_best_variant_returns_grind_applied_on_substats():
     r = _rune_plus12_legend()
-    res = best_variant(r, grind_grade=3, gem_grade=0)
+    res = best_variant(r, grind_grade=4, gem_grade=0)
     in_values = {s.type: s.value for s in r.substats}
     out_values = {s.type: s.value for s in res.rune.substats}
     grind_applied = any(
@@ -92,7 +92,7 @@ def test_best_variant_returns_grind_applied_on_substats():
 
 def test_best_plus0_uses_filter_authorized_grades():
     r = _rune_plus0_legend()
-    res = best_plus0(r, max_grind_grade=3, max_gem_grade=3)
+    res = best_plus0(r, max_grind_grade=4, max_gem_grade=4)
     assert isinstance(res, OptimizerResult)
     assert res.efficiency > 0
 

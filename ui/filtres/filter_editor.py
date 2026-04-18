@@ -217,11 +217,15 @@ class FilterEditor(QWidget):
         lbl_g = QLabel("Meule :")
         lbl_g.setStyleSheet(f"color:{theme.COLOR_GOLD};")
         self._grind_combo = QComboBox()
-        self._grind_combo.addItems(["Aucune", "Magique", "Rare", "Legendaire"])
+        self._grind_combo.addItems(
+            ["Aucune", "Magique", "Rare", "Heroique", "Legendaire"]
+        )
         lbl_m = QLabel("Gemme :")
         lbl_m.setStyleSheet(f"color:{theme.COLOR_GOLD};")
         self._gem_combo = QComboBox()
-        self._gem_combo.addItems(["Aucune", "Magique", "Rare", "Legendaire"])
+        self._gem_combo.addItems(
+            ["Aucune", "Magique", "Rare", "Heroique", "Legendaire"]
+        )
         row.addWidget(lbl_g)
         row.addWidget(self._grind_combo)
         row.addSpacing(16)

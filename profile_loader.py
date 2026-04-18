@@ -29,24 +29,39 @@ _BESTIARY: dict[int, str] | None = None
 
 
 def _load_bestiary() -> dict[int, str]:
-    """Try to load swarfarm bestiary.json for monster name lookup."""
+    """Try to load swarfarm bestiary.json for monster name lookup.
+
+    Re-reads the file if the cache is empty (lets the UI pick up names
+    downloaded after startup without an app restart).
+    """
     global _BESTIARY
-    if _BESTIARY is not None:
+    if _BESTIARY:
         return _BESTIARY
 
     bestiary_path = Path(__file__).parent / "bestiary.json"
     if bestiary_path.is_file():
-        with open(bestiary_path, encoding="utf-8") as f:
-            data = json.load(f)
-        _BESTIARY = {}
+        try:
+            with open(bestiary_path, encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            _BESTIARY = {}
+            return _BESTIARY
+        loaded: dict[int, str] = {}
         for entry in data:
-            mid = entry.get("unit_master_id") or entry.get("com2us_id")
+            mid = entry.get("com2us_id") or entry.get("unit_master_id")
             name = entry.get("name", "")
             if mid and name:
-                _BESTIARY[int(mid)] = name
+                loaded[int(mid)] = name
+        _BESTIARY = loaded
     else:
         _BESTIARY = {}
     return _BESTIARY
+
+
+def invalidate_bestiary_cache() -> None:
+    """Force the bestiary to be re-read from disk on next lookup."""
+    global _BESTIARY
+    _BESTIARY = None
 
 
 def _resolve_monster_name(unit_master_id: int) -> str:

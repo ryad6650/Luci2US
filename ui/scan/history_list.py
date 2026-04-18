@@ -1,7 +1,7 @@
 """Scrollable vertical list of HistoryItem - newest on top, capped to MAX items."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QScrollArea, QWidget, QVBoxLayout
 
 from models import Rune, Verdict
@@ -13,6 +13,8 @@ MAX_ITEMS = 50
 
 
 class HistoryList(QScrollArea):
+    item_clicked = Signal(object, object, int, tuple, tuple, str)
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWidgetResizable(True)
@@ -39,8 +41,13 @@ class HistoryList(QScrollArea):
         self._lay.addStretch()
         self.setWidget(self._content)
 
-    def add(self, rune: Rune, verdict: Verdict) -> None:
-        item = HistoryItem(rune, verdict)
+    def add(
+        self, rune: Rune, verdict: Verdict,
+        mana: int = 0, swop: tuple[float, float] = (0.0, 0.0),
+        s2us: tuple[float, float] = (0.0, 0.0), set_bonus: str = "",
+    ) -> None:
+        item = HistoryItem(rune, verdict, mana, swop, s2us, set_bonus)
+        item.clicked.connect(self.item_clicked)
         self._lay.insertWidget(0, item)
         while self._lay.count() - 1 > MAX_ITEMS:
             old = self._lay.takeAt(self._lay.count() - 2)

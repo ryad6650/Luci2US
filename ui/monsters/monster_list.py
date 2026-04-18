@@ -1,7 +1,7 @@
 """Liste des monstres : barre filtres (Task 3) + lignes scrollables."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QMetaObject, Q_ARG, Signal, Slot
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton,
@@ -10,11 +10,21 @@ from PySide6.QtWidgets import (
 
 import monster_icons
 from models import Monster
+from s2us_filter import calculate_efficiency_s2us
 from ui import theme
 
 
+def _rune_eff(rune) -> float | None:
+    if rune.swex_efficiency is not None:
+        return float(rune.swex_efficiency)
+    try:
+        return float(calculate_efficiency_s2us(rune))
+    except Exception:
+        return None
+
+
 def _avg_efficiency(monster: Monster) -> float:
-    effs = [r.swex_efficiency for r in monster.equipped_runes if r.swex_efficiency is not None]
+    effs = [e for e in (_rune_eff(r) for r in monster.equipped_runes) if e is not None]
     if not effs:
         return 0.0
     return sum(effs) / len(effs)
@@ -129,7 +139,7 @@ class MonsterList(QWidget):
         self._name_search.textChanged.connect(self._refresh_visible)
         filters.addWidget(self._name_search, 1)
 
-        self._refresh_btn = QPushButton("Refresh icones Swarfarm")
+        self._refresh_btn = QPushButton("Refresh icones & noms Swarfarm")
         self._refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._refresh_btn.clicked.connect(self._on_refresh_icons)
         filters.addWidget(self._refresh_btn)
@@ -183,11 +193,33 @@ class MonsterList(QWidget):
 
     def _on_refresh_icons(self) -> None:
         self._refresh_btn.setEnabled(False)
-        self._refresh_btn.setText("Telechargement...")
+        self._refresh_btn.setText("Telechargement... 0%")
 
-        def on_done():
-            self._refresh_btn.setEnabled(True)
-            self._refresh_btn.setText("Refresh icones Swarfarm")
-            self._refresh_visible()
+        def on_progress(done: int, total: int) -> None:
+            if total <= 0:
+                return
+            pct = int(done * 100 / total)
+            QMetaObject.invokeMethod(
+                self, "_set_refresh_progress",
+                Qt.ConnectionType.QueuedConnection,
+                Q_ARG(int, pct), Q_ARG(int, done), Q_ARG(int, total),
+            )
 
-        monster_icons.download_icons_async(on_done=on_done)
+        def on_done() -> None:
+            QMetaObject.invokeMethod(
+                self, "_on_refresh_done",
+                Qt.ConnectionType.QueuedConnection,
+            )
+
+        monster_icons.download_icons_async(on_progress=on_progress, on_done=on_done)
+
+    @Slot(int, int, int)
+    def _set_refresh_progress(self, pct: int, done: int, total: int) -> None:
+        self._refresh_btn.setText(f"Telechargement... {pct}% ({done}/{total})")
+
+    @Slot()
+    def _on_refresh_done(self) -> None:
+        self._refresh_btn.setEnabled(True)
+        self._refresh_btn.setText("Refresh icones & noms Swarfarm")
+        monster_icons.invalidate_names_cache()
+        self._refresh_visible()

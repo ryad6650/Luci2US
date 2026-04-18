@@ -9,6 +9,7 @@ Module pur (pas de Qt). Réutilise :
 """
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 
 from models import Rune
@@ -16,6 +17,7 @@ from powerup_simulator import project_to_plus12
 from s2us_filter import (
     S2USFilter,
     calculate_efficiency1,
+    calculate_score,
     match_filter,
 )
 
@@ -67,3 +69,52 @@ def filters_that_match(
     matching = [f for f in filters if f.enabled and match_filter(rune, f)]
     matching.sort(key=lambda f: f.efficiency, reverse=True)
     return matching
+
+
+def best_tied_variants(
+    rune: Rune,
+    grind_grade: int = 0,
+    gem_grade: int = 0,
+) -> list[Rune]:
+    """Variantes +12 à égalité sur Eff1 max puis Score max.
+
+    Le vrai bot expose un comportement non-déterministe sur l'exemple affiché
+    (Parallel.ForEach + ConcurrentBag ligne 1691 de -.18.cs). On reproduit ça
+    en retournant la liste complète des variantes tied, laissant l'UI tirer
+    au hasard.
+    """
+    variants = project_to_plus12(
+        rune, grind_grade=grind_grade, gem_grade=gem_grade,
+    )
+    if not variants:
+        return []
+    scored = [
+        (v, calculate_efficiency1(v), calculate_score(v))
+        for v in variants
+    ]
+    max_eff = max(s[1] for s in scored)
+    max_score = max(s[2] for s in scored if s[1] == max_eff)
+    return [v for v, e, sc in scored if e == max_eff and sc == max_score]
+
+
+def random_tied_variant(
+    rune: Rune,
+    grind_grade: int = 0,
+    gem_grade: int = 0,
+    rng: random.Random | None = None,
+) -> OptimizerResult:
+    """Tire une variante au hasard parmi celles à Eff1/Score max."""
+    tied = best_tied_variants(
+        rune, grind_grade=grind_grade, gem_grade=gem_grade,
+    )
+    if not tied:
+        return OptimizerResult(
+            rune=rune,
+            efficiency=float(calculate_efficiency1(rune)),
+        )
+    picker = rng if rng is not None else random
+    pick = picker.choice(tied)
+    return OptimizerResult(
+        rune=pick,
+        efficiency=float(calculate_efficiency1(pick)),
+    )

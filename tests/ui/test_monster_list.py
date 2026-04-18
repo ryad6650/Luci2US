@@ -43,7 +43,8 @@ def test_eff_moyenne_computed_from_equipped_runes(qapp):
     assert abs(row._eff_avg - 100.0) < 0.01
 
 
-def test_eff_moyenne_ignores_missing_swex_efficiency(qapp):
+def test_eff_moyenne_falls_back_when_swex_efficiency_missing(qapp):
+    """Runes without swex_efficiency fall back to computed efficiency (non-zero)."""
     ml = MonsterList()
     r1 = _rune(1, 100.0)
     r2 = _rune(2, 80.0)
@@ -51,7 +52,10 @@ def test_eff_moyenne_ignores_missing_swex_efficiency(qapp):
     mon = _monster("Lushen", runes=[r1, r2])
     ml.set_monsters([mon])
     row = ml._rows[0]
-    assert abs(row._eff_avg - 100.0) < 0.01
+    # r1 contributes 100.0; r2 fallback yields a non-None float. Avg must be >0
+    # and NOT equal to 100 (i.e. r2 participates in the average).
+    assert row._eff_avg > 0.0
+    assert row._eff_avg != 100.0
 
 
 def test_eff_moyenne_zero_when_no_runes(qapp):

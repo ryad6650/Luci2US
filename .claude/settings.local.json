@@ -9,7 +9,15 @@
       "Bash(python:*)",
       "Bash(ls:*)",
       "Bash(grep -E \"\\\\.py$|\\\\.json$|\\\\.md$\")",
-      "Bash(npm update:*)"
+      "Bash(npm update:*)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(awk '{print $2}')",
+      "Bash(git commit *)",
+      "Bash(git stash *)",
+      "Bash(gh --version)",
+      "Bash(winget install *)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" --version)"
     ]
   }
 }

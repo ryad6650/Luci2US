@@ -47,12 +47,14 @@ class AutoMode:
         config: dict,
         on_state_change: Callable[[State], None] | None = None,
         on_rune_processed: Callable[[Rune, Verdict], None] | None = None,
+        on_rune_upgraded: Callable[[Rune, Verdict], None] | None = None,
         on_session_update: Callable[[SessionStats], None] | None = None,
         on_profile_loaded: Callable[[dict], None] | None = None,
     ) -> None:
         self._config = config
         self._on_state_change = on_state_change
         self._on_rune_processed = on_rune_processed
+        self._on_rune_upgraded = on_rune_upgraded
         self._on_session_update = on_session_update
 
         self._state = State.IDLE
@@ -160,6 +162,8 @@ class AutoMode:
                 self._record_rune(rune, verdict)
             if self._on_rune_processed:
                 self._on_rune_processed(rune, verdict)
+            if self._on_rune_upgraded:
+                self._on_rune_upgraded(rune, verdict)
         except Exception:
             self._set_state(State.ERROR)
             return

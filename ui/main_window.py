@@ -7,7 +7,8 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QStackedWidget, QLabel,
 )
 
-from profile_loader import load_profile_from_dict
+import monster_icons
+from profile_loader import invalidate_bestiary_cache, load_profile_from_dict
 from profile_store import load_profile_payload, save_profile_payload
 from ui import theme
 from ui.controllers.scan_controller import ScanController
@@ -105,7 +106,30 @@ class MainWindow(QMainWindow):
 
         self.profile_page.import_requested.connect(self._on_profile_import)
 
+        self._last_profile_payload: dict | None = None
+        self._last_profile_saved_at: object = ""
+
         self._restore_cached_profile()
+        self._maybe_fetch_bestiary()
+
+    def _maybe_fetch_bestiary(self) -> None:
+        """If bestiary.json is missing, fetch names in background and reapply."""
+        if monster_icons.is_bestiary_available():
+            return
+        monster_icons.download_bestiary_async(on_done=self._on_bestiary_ready)
+
+    def _on_bestiary_ready(self) -> None:
+        invalidate_bestiary_cache()
+        monster_icons.invalidate_names_cache()
+        if self._last_profile_payload is None:
+            return
+        try:
+            profile = load_profile_from_dict(self._last_profile_payload)
+        except Exception:
+            return
+        profile["source"] = "cache"
+        self.profile_page.apply_profile(profile, self._last_profile_saved_at)
+        self.monsters_page.apply_profile(profile, self._last_profile_saved_at)
 
     def _restore_cached_profile(self) -> None:
         cached = load_profile_payload()
@@ -117,6 +141,8 @@ class MainWindow(QMainWindow):
         except Exception:
             return
         profile["source"] = "cache"
+        self._last_profile_payload = payload
+        self._last_profile_saved_at = saved_at
         self.profile_page.apply_profile(profile, saved_at)
         self.monsters_page.apply_profile(profile, saved_at)
 
@@ -144,6 +170,8 @@ class MainWindow(QMainWindow):
             ).isoformat(timespec="seconds")
         except OSError:
             mtime = ""
+        self._last_profile_payload = payload
+        self._last_profile_saved_at = mtime
         self.profile_page.apply_profile(profile, mtime)
         self.monsters_page.apply_profile(profile, mtime)
 

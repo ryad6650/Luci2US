@@ -71,35 +71,38 @@ ROLL_MAX_5: dict[str, int] = {
     "DC": 5, "RES": 7, "PRE": 7, "ATQ": 15, "DEF": 15, "PV": 300,
 }
 
-# Max grind par stat selon grade de meule (0=aucune, 1=Magique, 2=Rare, 3=Legendaire)
-# CC/DC/PRE/RES = 0 (non grindables).
+# Max grind par stat selon grade de meule (0=aucune, 1=Magique, 2=Rare,
+# 3=Heroique, 4=Legendaire). CC/DC/PRE/RES = 0 (non grindables).
+# Valeurs in-game confirmees par user 2026-04-18 (le bot original n'exposait
+# que 4 grades en sautant Magique, cf -.18.cs ligne 1813).
 GRIND_MAX: dict[str, list[int]] = {
-    "VIT":  [0, 3, 4, 5],
-    "ATQ%": [0, 6, 7, 10],
-    "DEF%": [0, 6, 7, 10],
-    "PV%":  [0, 6, 7, 10],
-    "CC":   [0, 0, 0, 0],
-    "DC":   [0, 0, 0, 0],
-    "PRE":  [0, 0, 0, 0],
-    "RES":  [0, 0, 0, 0],
-    "ATQ":  [0, 18, 22, 30],
-    "DEF":  [0, 18, 22, 30],
-    "PV":   [0, 250, 450, 550],
+    "VIT":  [0, 2, 3, 4, 5],
+    "ATQ%": [0, 5, 6, 7, 10],
+    "DEF%": [0, 5, 6, 7, 10],
+    "PV%":  [0, 5, 6, 7, 10],
+    "CC":   [0, 0, 0, 0, 0],
+    "DC":   [0, 0, 0, 0, 0],
+    "PRE":  [0, 0, 0, 0, 0],
+    "RES":  [0, 0, 0, 0, 0],
+    "ATQ":  [0, 12, 18, 22, 30],
+    "DEF":  [0, 12, 18, 22, 30],
+    "PV":   [0, 200, 250, 450, 550],
 }
 
-# Max gem par stat selon grade de gemme (0=aucune, 1=Magique, 2=Rare, 3=Legendaire)
+# Max gem par stat selon grade de gemme (0=aucune, 1=Magique, 2=Rare,
+# 3=Heroique, 4=Legendaire). Valeurs in-game confirmees par user 2026-04-18.
 GEM_MAX: dict[str, list[int]] = {
-    "VIT":  [0, 6, 8, 10],
-    "ATQ%": [0, 9, 11, 13],
-    "DEF%": [0, 9, 11, 13],
-    "PV%":  [0, 9, 11, 13],
-    "DC":   [0, 6, 8, 10],
-    "CC":   [0, 5, 7, 9],
-    "PRE":  [0, 8, 9, 11],
-    "RES":  [0, 8, 9, 11],
-    "ATQ":  [0, 23, 30, 40],
-    "DEF":  [0, 23, 30, 40],
-    "PV":   [0, 310, 420, 580],
+    "VIT":  [0, 4, 6, 8, 10],
+    "ATQ%": [0, 7, 9, 11, 13],
+    "DEF%": [0, 7, 9, 11, 13],
+    "PV%":  [0, 7, 9, 11, 13],
+    "DC":   [0, 5, 6, 8, 10],
+    "CC":   [0, 4, 5, 7, 9],
+    "PRE":  [0, 6, 8, 9, 11],
+    "RES":  [0, 6, 8, 9, 11],
+    "ATQ":  [0, 16, 23, 30, 40],
+    "DEF":  [0, 16, 23, 30, 40],
+    "PV":   [0, 220, 310, 420, 580],
 }
 
 SETS_FR: list[str] = [
