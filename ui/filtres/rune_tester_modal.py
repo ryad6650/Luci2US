@@ -1,7 +1,7 @@
 """Modale Rune Optimizer : saisie d'une rune + sortie optimale + filtres matches."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QHBoxLayout, QLabel,
     QListWidget, QPushButton, QRadioButton, QSpinBox, QVBoxLayout, QWidget,
@@ -188,20 +188,23 @@ class RuneTesterModal(QDialog):
         eff_row = QHBoxLayout()
         lbl_eff = QLabel("Efficacite :")
         lbl_eff.setStyleSheet(f"color:{theme.COLOR_GOLD}; font-weight:600;")
+        lbl_eff.setFixedWidth(160)
         self._eff_current = QLabel("—")
         self._eff_current.setStyleSheet(f"color:{theme.COLOR_TEXT_SUB};")
         self._eff_arrow = QLabel("\u2192")
-        self._eff_arrow.setStyleSheet(f"color:{theme.COLOR_EMBER};")
+        self._eff_arrow.setStyleSheet(
+            f"color:{theme.COLOR_EMBER}; font-weight:700;"
+        )
         self._eff_projected = QLabel("—")
         self._eff_projected.setStyleSheet(
             f"color:{theme.COLOR_GOLD_TITLE}; font-weight:700;"
         )
         eff_row.addWidget(lbl_eff)
-        eff_row.addWidget(self._eff_current)
-        eff_row.addSpacing(10)
+        eff_row.addWidget(self._eff_current, 1)
+        eff_row.addSpacing(8)
         eff_row.addWidget(self._eff_arrow)
-        eff_row.addWidget(self._eff_projected)
-        eff_row.addStretch()
+        eff_row.addSpacing(8)
+        eff_row.addWidget(self._eff_projected, 1)
         root.addLayout(eff_row)
 
         self._result_label = QLabel("")
@@ -245,6 +248,29 @@ class RuneTesterModal(QDialog):
 
         self._slot_spin.valueChanged.connect(self._on_slot_changed)
         self._on_slot_changed(self._slot_spin.value())
+
+        self._live_timer = QTimer(self)
+        self._live_timer.setSingleShot(True)
+        self._live_timer.setInterval(300)
+        self._live_timer.timeout.connect(self._refresh_live_eff)
+
+        schedule = self._live_timer.start
+        for combo in (
+            self._class_combo, self._set_combo, self._grade_combo,
+            self._main_combo, self._innate_type_combo,
+        ):
+            combo.currentIndexChanged.connect(lambda _i: schedule())
+        for spin in (
+            self._level_spin, self._stars_spin, self._slot_spin,
+            self._innate_val_spin,
+        ):
+            spin.valueChanged.connect(lambda _v: schedule())
+        for ctype, cval in self._sub_stats:
+            ctype.currentIndexChanged.connect(lambda _i: schedule())
+            cval.valueChanged.connect(lambda _v: schedule())
+        for cb in self._sub_grinded:
+            cb.toggled.connect(lambda _c: schedule())
+        self._refresh_live_eff()
 
     @staticmethod
     def _form_row(label_text: str, widget: QWidget | None) -> QHBoxLayout:
@@ -329,6 +355,36 @@ class RuneTesterModal(QDialog):
             ancient=(self._class_combo.currentText() == "Ancient"),
         )
 
+    def _format_eff_triplet(self, rune: Rune) -> str:
+        from s2us_filter import (
+            calculate_efficiency1, calculate_efficiency2, calculate_score,
+        )
+        try:
+            score = int(calculate_score(rune))
+            e1 = int(calculate_efficiency1(rune))
+            e2 = int(calculate_efficiency2(rune))
+        except (ValueError, KeyError, AttributeError, TypeError):
+            return "—"
+        return f"Score {score}  |  {e1}% S2US  |  {e2}% SWOP"
+
+    def _refresh_live_eff(self) -> None:
+        try:
+            rune = self._read_rune()
+        except (ValueError, KeyError, AttributeError, TypeError):
+            self._eff_current.setText("—")
+            self._eff_projected.setText("—")
+            return
+        self._eff_current.setText("Actuelle : " + self._format_eff_triplet(rune))
+
+        try:
+            from rune_optimizer import best_plus0
+            proj = best_plus0(rune, max_grind_grade=0, max_gem_grade=0)
+            self._eff_projected.setText(
+                "+12 : " + self._format_eff_triplet(proj.rune)
+            )
+        except (ValueError, KeyError, AttributeError, TypeError, IndexError):
+            self._eff_projected.setText("+12 : —")
+
     def _sub_breakdown(
         self, orig: Rune, opt: Rune, grind: int, gem: int,
     ) -> list[str]:
@@ -380,15 +436,17 @@ class RuneTesterModal(QDialog):
             result = best_now(rune, grind_grade=grind, gem_grade=gem)
             mode = "Meilleure amelioration immediate"
 
-        from s2us_filter import calculate_efficiency1
-        current_eff = int(calculate_efficiency1(rune))
-        self._eff_current.setText(f"{current_eff}")
-        self._eff_projected.setText(f"{int(result.efficiency)}")
+        self._eff_current.setText("Actuelle : " + self._format_eff_triplet(rune))
+        self._eff_projected.setText(
+            "+12 optimal : " + self._format_eff_triplet(result.rune)
+        )
 
         breakdown = self._sub_breakdown(rune, result.rune, grind, gem)
         for i, lbl in enumerate(self._sub_hint):
             lbl.setText(breakdown[i] if i < len(breakdown) else "")
 
+        from s2us_filter import calculate_efficiency1
+        current_eff = int(calculate_efficiency1(rune))
         self._result_label.setText(
             f"{mode}  (Eff1 {current_eff} \u2192 {int(result.efficiency)})"
         )
