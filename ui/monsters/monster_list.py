@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget,
+    QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QScrollArea,
+    QVBoxLayout, QWidget,
 )
 
 from models import Monster
@@ -91,6 +92,32 @@ class MonsterList(QWidget):
         outer.setContentsMargins(16, 12, 16, 12)
         outer.setSpacing(8)
 
+        # --- Barre de filtres ---
+        filters = QHBoxLayout()
+        filters.setSpacing(10)
+
+        self._element_combo = QComboBox()
+        self._element_combo.addItems(["Tous", "Eau", "Feu", "Vent", "Lumiere", "Tenebres"])
+        self._element_combo.setFixedWidth(120)
+        self._element_combo.currentTextChanged.connect(self._refresh_visible)
+        filters.addWidget(QLabel("Element :"))
+        filters.addWidget(self._element_combo)
+
+        self._stars_combo = QComboBox()
+        self._stars_combo.addItems([">=1", ">=2", ">=3", ">=4", ">=5", ">=6"])
+        self._stars_combo.setCurrentText(">=1")
+        self._stars_combo.setFixedWidth(80)
+        self._stars_combo.currentTextChanged.connect(self._refresh_visible)
+        filters.addWidget(QLabel("Etoiles :"))
+        filters.addWidget(self._stars_combo)
+
+        self._name_search = QLineEdit()
+        self._name_search.setPlaceholderText("Rechercher par nom...")
+        self._name_search.textChanged.connect(self._refresh_visible)
+        filters.addWidget(self._name_search, 1)
+
+        outer.addLayout(filters)
+
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -105,14 +132,31 @@ class MonsterList(QWidget):
         outer.addWidget(self._scroll)
 
     def set_monsters(self, monsters: list[Monster]) -> None:
+        self._all_monsters = list(monsters)
+        self._refresh_visible()
+
+    def _refresh_visible(self) -> None:
         for row in self._rows:
             row.setParent(None)
             row.deleteLater()
         self._rows.clear()
-        self._all_monsters = list(monsters)
+
+        elem = self._element_combo.currentText()
+        min_stars = int(self._stars_combo.currentText().lstrip(">="))
+        name_query = self._name_search.text().strip().lower()
+
+        filtered = []
+        for mon in self._all_monsters:
+            if elem != "Tous" and mon.element != elem:
+                continue
+            if mon.stars < min_stars:
+                continue
+            if name_query and name_query not in mon.name.lower():
+                continue
+            filtered.append(mon)
 
         stretch_index = self._rows_layout.count() - 1
-        for monster in monsters:
+        for monster in filtered:
             row = _MonsterRow(monster)
             row.clicked.connect(self.monster_clicked.emit)
             self._rows.append(row)

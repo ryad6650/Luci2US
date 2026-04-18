@@ -66,3 +66,62 @@ def test_set_monsters_clears_previous_rows(qapp):
     assert len(ml._rows) == 2
     ml.set_monsters([_monster("C")])
     assert len(ml._rows) == 1
+
+
+def test_filter_by_element(qapp):
+    ml = MonsterList()
+    ml.set_monsters([
+        _monster("Lushen", element="Vent"),
+        _monster("Laika", element="Feu"),
+        _monster("Bella", element="Eau"),
+    ])
+    ml._element_combo.setCurrentText("Vent")
+    assert len(ml._rows) == 1
+    assert ml._rows[0]._monster.name == "Lushen"
+
+
+def test_filter_by_min_stars(qapp):
+    ml = MonsterList()
+    ml.set_monsters([
+        _monster("A", stars=4),
+        _monster("B", stars=5),
+        _monster("C", stars=6),
+    ])
+    ml._stars_combo.setCurrentText(">=6")
+    assert len(ml._rows) == 1
+    assert ml._rows[0]._monster.name == "C"
+
+
+def test_filter_by_name_substring(qapp):
+    ml = MonsterList()
+    ml.set_monsters([
+        _monster("Lushen"),
+        _monster("Laika"),
+        _monster("Lupine"),
+    ])
+    ml._name_search.setText("Lu")
+    names = {r._monster.name for r in ml._rows}
+    assert names == {"Lushen", "Lupine"}
+
+
+def test_filter_all_element_shows_all(qapp):
+    ml = MonsterList()
+    ml.set_monsters([
+        _monster("A", element="Vent"),
+        _monster("B", element="Feu"),
+    ])
+    ml._element_combo.setCurrentText("Tous")
+    assert len(ml._rows) == 2
+
+
+def test_filters_combine(qapp):
+    ml = MonsterList()
+    ml.set_monsters([
+        _monster("Laika", element="Feu", stars=6),
+        _monster("Laika2", element="Feu", stars=5),
+        _monster("Lushen", element="Vent", stars=6),
+    ])
+    ml._element_combo.setCurrentText("Feu")
+    ml._stars_combo.setCurrentText(">=6")
+    assert len(ml._rows) == 1
+    assert ml._rows[0]._monster.name == "Laika"
