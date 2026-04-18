@@ -195,6 +195,35 @@ class RuneTesterModal(QDialog):
             substats=subs,
         )
 
+    def _describe_changes(
+        self, orig: Rune, opt: Rune, grind: int, gem: int,
+    ) -> str:
+        lines: list[str] = []
+        if gem > 0:
+            gemmed_idx: int | None = None
+            gemmed_type: str | None = None
+            for i, s in enumerate(opt.substats):
+                if i >= len(orig.substats):
+                    gemmed_idx, gemmed_type = i + 1, s.type
+                    break
+                if orig.substats[i].type != s.type:
+                    gemmed_idx, gemmed_type = i + 1, s.type
+                    break
+            if gemmed_idx is not None and gemmed_type is not None:
+                disp = _FR_TO_DISPLAY.get(gemmed_type, gemmed_type)
+                lines.append(
+                    f"Gemme {_GRIND_LABELS[gem]} : {disp} (sub #{gemmed_idx})"
+                )
+            else:
+                lines.append(
+                    f"Gemme {_GRIND_LABELS[gem]} : aucune amelioration retenue"
+                )
+        if grind > 0:
+            lines.append(
+                f"Meule {_GRIND_LABELS[grind]} : appliquee sur toutes les subs grindables"
+            )
+        return "\n".join(lines)
+
     def _on_optimize(self) -> None:
         rune = self._read_rune()
         grind = self._grind_combo.currentIndex()
@@ -210,9 +239,11 @@ class RuneTesterModal(QDialog):
             f"{_FR_TO_DISPLAY.get(s.type, s.type)} {int(s.value)}"
             for s in result.rune.substats
         )
-        self._result_label.setText(
-            f"{mode}\nEff1 = {int(result.efficiency)}\n{subs_txt}"
-        )
+        changes_txt = self._describe_changes(rune, result.rune, grind, gem)
+        parts = [mode, f"Eff1 = {int(result.efficiency)}", subs_txt]
+        if changes_txt:
+            parts.append(changes_txt)
+        self._result_label.setText("\n".join(parts))
 
         self._filters_list.clear()
         for f in filters_that_match(result.rune, self._filters):
