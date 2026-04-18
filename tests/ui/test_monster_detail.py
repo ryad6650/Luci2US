@@ -1,77 +1,105 @@
-from PySide6.QtWidgets import QLabel, QPushButton
+"""Detail modal smoke tests — it loads a monster and switches tabs."""
+from PySide6.QtWidgets import QLabel
 
 from models import Monster, Rune, SubStat
-from ui.monsters.monster_detail import MonsterDetail
-
-
-def _monster(name: str = "Lushen", runes: list | None = None) -> Monster:
-    return Monster(
-        name=name, element="Vent", stars=6, level=40, unit_master_id=11211,
-        equipped_runes=runes or [],
-    )
-
-
-def test_detail_instantiates(qapp):
-    assert MonsterDetail() is not None
-
-
-def test_detail_back_button_exists_and_emits_signal(qapp):
-    d = MonsterDetail()
-    received: list = []
-    d.back_clicked.connect(lambda: received.append(1))
-    btns = [b for b in d.findChildren(QPushButton) if "Retour" in b.text()]
-    assert len(btns) == 1
-    btns[0].click()
-    assert received == [1]
-
-
-def test_set_monster_fills_header(qapp):
-    d = MonsterDetail()
-    d.set_monster(_monster(name="Lushen"))
-    texts = " | ".join(lbl.text() for lbl in d.findChildren(QLabel))
-    assert "Lushen" in texts
-    assert "Vent" in texts
-    assert "40" in texts
-
-
-def test_set_monster_none_shows_empty_state(qapp):
-    d = MonsterDetail()
-    d.set_monster(None)
-    assert d is not None
+from ui.monsters.monster_detail_modal import MonsterDetailModal
 
 
 def _rune(slot: int, set_name: str = "Violent", main: str = "ATQ%", val: float = 63.0) -> Rune:
     return Rune(
-        set=set_name, slot=slot, stars=6, grade="Legend", level=12,
+        set=set_name, slot=slot, stars=6, grade="Legendaire", level=12,
         main_stat=SubStat(type=main, value=val),
-        prefix=None, substats=[],
+        prefix=None, substats=[], swex_efficiency=90.0,
     )
 
 
-def test_detail_shows_6_slot_cards(qapp):
-    d = MonsterDetail()
+def _monster(runes: list | None = None) -> Monster:
+    return Monster(
+        name="Lushen", element="Vent", stars=6, level=40, unit_master_id=11211,
+        equipped_runes=runes or [],
+    )
+
+
+def _text(modal) -> str:
+    return " | ".join(lbl.text() for lbl in modal.findChildren(QLabel))
+
+
+def test_modal_instantiates_without_parent(qapp):
+    assert MonsterDetailModal() is not None
+
+
+def test_load_populates_header(qapp):
+    modal = MonsterDetailModal()
+    mon = _monster()
+    modal.load(
+        monster=mon,
+        runes=[None] * 6,
+        rune_effs=[None] * 6,
+        base_stats={}, total_stats={},
+        skills=[], passive=None, analysis="",
+    )
+    text = _text(modal)
+    assert "Lushen" in text
+    assert "Vent" in text
+    assert "lv40" in text
+
+
+def test_load_with_runes_sets_average_efficiency(qapp):
+    modal = MonsterDetailModal()
     runes = [_rune(i) for i in range(1, 7)]
-    d.set_monster(_monster(runes=runes))
-    assert len(d._slot_containers) == 6
+    effs = [90.0] * 6
+    modal.load(
+        monster=_monster(runes=runes),
+        runes=runes,
+        rune_effs=effs,
+        base_stats={}, total_stats={},
+        skills=[], passive=None, analysis="",
+    )
+    assert modal._avg_eff == 90.0
+    assert modal._equipped_count == 6
+    assert "90.0%" in _text(modal)
 
 
-def _slot_texts(wrap) -> str:
-    return " | ".join(lbl.text() for lbl in wrap.findChildren(QLabel))
+def test_switching_tabs_changes_stacked_index(qapp):
+    modal = MonsterDetailModal()
+    modal.load(
+        monster=_monster(),
+        runes=[None] * 6, rune_effs=[None] * 6,
+        base_stats={}, total_stats={},
+        skills=[], passive=None, analysis="",
+    )
+    modal._set_tab("stats")
+    assert modal._body.currentIndex() == 1
+    modal._set_tab("skills")
+    assert modal._body.currentIndex() == 2
+    modal._set_tab("runes")
+    assert modal._body.currentIndex() == 0
 
 
-def test_empty_slot_shows_placeholder(qapp):
-    d = MonsterDetail()
-    runes = [_rune(1), _rune(3)]
-    d.set_monster(_monster(runes=runes))
-    assert len(d._slot_containers) == 6
-    assert "Vide" in _slot_texts(d._slot_containers[1])
-    assert "Vide" in _slot_texts(d._slot_containers[3])
+def test_close_button_triggers_reject(qapp):
+    modal = MonsterDetailModal()
+    modal.load(
+        monster=_monster(),
+        runes=[None] * 6, rune_effs=[None] * 6,
+        base_stats={}, total_stats={},
+        skills=[], passive=None, analysis="",
+    )
+    closed: list[int] = []
+    modal.rejected.connect(lambda: closed.append(1))
+    modal._close_btn.click()
+    assert closed == [1]
 
 
-def test_filled_slot_shows_set_and_main(qapp):
-    d = MonsterDetail()
-    runes = [_rune(1, set_name="Violent", main="ATQ%", val=63.0)]
-    d.set_monster(_monster(runes=runes))
-    content = _slot_texts(d._slot_containers[0])
-    assert "Violent" in content
-    assert "ATQ" in content
+def test_optimize_button_emits_monster(qapp):
+    modal = MonsterDetailModal()
+    mon = _monster()
+    modal.load(
+        monster=mon,
+        runes=[None] * 6, rune_effs=[None] * 6,
+        base_stats={}, total_stats={},
+        skills=[], passive=None, analysis="",
+    )
+    seen = []
+    modal.optimize_clicked.connect(seen.append)
+    modal._opt_btn.click()
+    assert seen == [mon]

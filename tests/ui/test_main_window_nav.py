@@ -75,7 +75,7 @@ def test_profile_loaded_signal_feeds_runes_page(qapp):
         "source": "manual",
     }
     mw.runes_page.apply_profile(profile, 0.0)
-    assert mw.runes_page._table._table.rowCount() == 1
+    assert mw.runes_page._table._model.rowCount() == 1
     assert mw.runes_page._equipped_index.get(1) == "Lushen"
 
 

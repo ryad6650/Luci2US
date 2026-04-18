@@ -41,45 +41,64 @@ _CLASSES = ["Normal", "Ancient"]
 
 
 _MODAL_QSS = f"""
-QDialog {{ background: {theme.COLOR_BG_FRAME}; }}
-QLabel {{ color:{theme.COLOR_TEXT_MAIN}; background: transparent; }}
+QDialog {{ background: #1a0f14; }}
+QLabel {{ color:{theme.D.FG}; background: transparent; font-family:'{theme.D.FONT_UI}'; }}
 QComboBox, QSpinBox {{
-    background: {theme.COLOR_BG_APP};
-    color:{theme.COLOR_TEXT_MAIN};
-    border:1px solid {theme.COLOR_BORDER_FRAME};
-    border-radius:3px;
-    padding: 2px 6px;
-    min-height: 20px;
+    background: rgba(255,255,255,0.025);
+    color:{theme.D.FG};
+    border:1px solid {theme.D.BORDER_STR};
+    border-radius:6px;
+    padding: 4px 8px;
+    min-height: 22px;
+    font-family:'{theme.D.FONT_UI}'; font-size: 12px;
 }}
-QComboBox:hover, QSpinBox:hover {{ border:1px solid {theme.COLOR_GOLD}; }}
-QComboBox::drop-down {{ border: none; width: 14px; }}
-QCheckBox {{ color:{theme.COLOR_TEXT_SUB}; background: transparent; spacing:4px; }}
+QComboBox:hover, QSpinBox:hover {{ border:1px solid {theme.D.ACCENT}aa; }}
+QComboBox::drop-down {{ border: none; width: 16px; }}
+QComboBox QAbstractItemView {{
+    background: #1a0f14;
+    color: {theme.D.FG};
+    border: 1px solid {theme.D.BORDER};
+    selection-background-color: {theme.D.ACCENT_DIM};
+    selection-color: {theme.D.ACCENT};
+    outline: 0;
+}}
+QCheckBox {{ color:{theme.D.FG_DIM}; background: transparent; spacing: 8px;
+    font-family:'{theme.D.FONT_UI}'; font-size: 12px;
+}}
 QCheckBox::indicator {{
-    width: 12px; height: 12px;
-    border: 1px solid {theme.COLOR_BORDER_FRAME};
-    background: {theme.COLOR_BG_APP};
-    border-radius: 2px;
+    width: 14px; height: 14px;
+    border: 1.5px solid {theme.D.BORDER_STR};
+    background: transparent;
+    border-radius: 3px;
 }}
 QCheckBox::indicator:checked {{
-    background: {theme.COLOR_GOLD};
-    border: 1px solid {theme.COLOR_GOLD};
+    background: {theme.D.ACCENT};
+    border: 1.5px solid {theme.D.ACCENT};
 }}
-QRadioButton {{ color:{theme.COLOR_TEXT_SUB}; background: transparent; spacing:4px; }}
+QRadioButton {{ color:{theme.D.FG_DIM}; background: transparent; spacing: 8px;
+    font-family:'{theme.D.FONT_UI}'; font-size: 12px;
+}}
 QRadioButton::indicator {{
-    width: 12px; height: 12px;
-    border: 1px solid {theme.COLOR_BORDER_FRAME};
-    background: {theme.COLOR_BG_APP};
+    width: 14px; height: 14px;
+    border: 1.5px solid {theme.D.BORDER_STR};
+    background: transparent;
     border-radius: 7px;
 }}
 QRadioButton::indicator:checked {{
-    background: {theme.COLOR_GOLD};
-    border: 1px solid {theme.COLOR_GOLD};
+    background: {theme.D.ACCENT};
+    border: 1.5px solid {theme.D.ACCENT};
 }}
 QListWidget {{
-    background: {theme.COLOR_BG_APP};
-    color: {theme.COLOR_TEXT_MAIN};
-    border: 1px solid {theme.COLOR_BORDER_FRAME};
-    border-radius: 3px;
+    background: rgba(255,255,255,0.02);
+    color: {theme.D.FG};
+    border: 1px solid {theme.D.BORDER};
+    border-radius: 8px;
+    padding: 4px;
+    font-family:'{theme.D.FONT_UI}'; font-size: 12px;
+}}
+QListWidget::item {{ padding: 6px 8px; border-radius: 4px; }}
+QListWidget::item:selected {{
+    background: {theme.D.ACCENT_DIM}; color: {theme.D.ACCENT};
 }}
 """
 
@@ -111,7 +130,7 @@ class RuneTesterModal(QDialog):
         self._level_spin.setValue(0)
         self._level_hint = QLabel("\u2192 +12")
         self._level_hint.setStyleSheet(
-            f"color:{theme.COLOR_EMBER}; font-weight:700;"
+            f"color:{theme.D.WARN}; font-weight:700; font-family:'{theme.D.FONT_MONO}';"
         )
         self._grade_combo = QComboBox()
         self._grade_combo.addItems(_GRADES)
@@ -164,7 +183,7 @@ class RuneTesterModal(QDialog):
             rb_ench = QRadioButton("Enchante")
             self._enchant_group.addButton(rb_ench, i)
             hint = QLabel("")
-            hint.setStyleSheet(f"color:{theme.COLOR_EMBER};")
+            hint.setStyleSheet(f"color:{theme.D.WARN}; font-family:'{theme.D.FONT_MONO}';")
             row.addWidget(ctype)
             row.addWidget(cval)
             row.addWidget(cb_grind)
@@ -180,12 +199,12 @@ class RuneTesterModal(QDialog):
         opt_row = QHBoxLayout()
         opt_row.setSpacing(8)
         lbl_g = QLabel("Meule :")
-        lbl_g.setStyleSheet(f"color:{theme.COLOR_GOLD}; font-weight:600;")
+        lbl_g.setStyleSheet(f"color:{theme.D.ACCENT}; font-weight:600; font-family:'{theme.D.FONT_UI}'; font-size:11px; letter-spacing:0.3px;")
         self._grind_combo = QComboBox()
         self._grind_combo.addItems(_GRIND_LABELS)
         self._grind_combo.setCurrentIndex(4)
         lbl_m = QLabel("Gemme :")
-        lbl_m.setStyleSheet(f"color:{theme.COLOR_GOLD}; font-weight:600;")
+        lbl_m.setStyleSheet(f"color:{theme.D.ACCENT}; font-weight:600; font-family:'{theme.D.FONT_UI}'; font-size:11px; letter-spacing:0.3px;")
         self._gem_combo = QComboBox()
         self._gem_combo.addItems(_GRIND_LABELS)
         self._gem_combo.setCurrentIndex(4)
@@ -199,17 +218,17 @@ class RuneTesterModal(QDialog):
 
         eff_row = QHBoxLayout()
         lbl_eff = QLabel("Efficacite :")
-        lbl_eff.setStyleSheet(f"color:{theme.COLOR_GOLD}; font-weight:600;")
+        lbl_eff.setStyleSheet(f"color:{theme.D.ACCENT}; font-weight:600; font-family:'{theme.D.FONT_UI}'; font-size:11px; letter-spacing:0.3px;")
         lbl_eff.setFixedWidth(160)
         self._eff_current = QLabel("—")
-        self._eff_current.setStyleSheet(f"color:{theme.COLOR_TEXT_SUB};")
+        self._eff_current.setStyleSheet(f"color:{theme.D.FG_DIM}; font-family:'{theme.D.FONT_UI}';")
         self._eff_arrow = QLabel("\u2192")
         self._eff_arrow.setStyleSheet(
-            f"color:{theme.COLOR_EMBER}; font-weight:700;"
+            f"color:{theme.D.WARN}; font-weight:700; font-family:'{theme.D.FONT_MONO}';"
         )
         self._eff_projected = QLabel("—")
         self._eff_projected.setStyleSheet(
-            f"color:{theme.COLOR_GOLD_TITLE}; font-weight:700;"
+            f"color:{theme.D.ACCENT}; font-weight:700; font-family:'{theme.D.FONT_MONO}';"
         )
         eff_row.addWidget(lbl_eff)
         eff_row.addWidget(self._eff_current, 1)
@@ -221,7 +240,7 @@ class RuneTesterModal(QDialog):
 
         self._result_label = QLabel("")
         self._result_label.setStyleSheet(
-            f"color:{theme.COLOR_TEXT_SUB}; font-size:11px;"
+            f"color:{theme.D.FG_DIM}; font-family:'{theme.D.FONT_UI}'; font-size:11px; line-height: 1.5;"
         )
         self._result_label.setWordWrap(True)
         root.addWidget(self._result_label)
@@ -232,20 +251,31 @@ class RuneTesterModal(QDialog):
         self._btn_back.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_back.setFixedWidth(48)
         self._btn_back.setStyleSheet(
-            f"QPushButton {{ background:{theme.COLOR_SELL};"
-            f" color:{theme.COLOR_TEXT_MAIN}; border:none; border-radius:4px;"
-            f" padding:10px; font-size:15px; font-weight:700; }}"
-            f"QPushButton:hover {{ background:#ef5a48; }}"
+            f"QPushButton {{ background: transparent;"
+            f" color:{theme.D.FG_DIM};"
+            f" border: 1px solid {theme.D.BORDER_STR};"
+            f" border-radius: 8px;"
+            f" padding:8px; font-family:'{theme.D.FONT_UI}';"
+            f" font-size:14px; font-weight:700; }}"
+            f"QPushButton:hover {{ color:{theme.D.FG}; border: 1px solid {theme.D.FG_MUTE}; }}"
         )
         self._btn_back.clicked.connect(self.reject)
         self._btn_optimize = QPushButton("Lancer l'analyse")
         self._btn_optimize.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_optimize.setStyleSheet(
-            f"QPushButton {{ background:{theme.COLOR_KEEP};"
-            f" color:{theme.COLOR_BG_APP}; border:none; border-radius:4px;"
-            f" padding:10px; font-size:14px; font-weight:700;"
-            f" letter-spacing:0.5px; }}"
-            f"QPushButton:hover {{ background:#a2d85a; }}"
+            f"""
+            QPushButton {{
+                padding: 10px 18px; border: none; border-radius: 8px;
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {theme.D.ACCENT}, stop:1 {theme.D.ACCENT_2});
+                color: #fff; font-family: '{theme.D.FONT_UI}';
+                font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+            }}
+            QPushButton:hover {{
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {theme.D.ACCENT_2}, stop:1 {theme.D.ACCENT});
+            }}
+            """
         )
         self._btn_optimize.clicked.connect(self._on_optimize)
         btn_row.addWidget(self._btn_back)
@@ -253,7 +283,7 @@ class RuneTesterModal(QDialog):
         root.addLayout(btn_row)
 
         lbl_fm = QLabel("Filtres matches :")
-        lbl_fm.setStyleSheet(f"color:{theme.COLOR_GOLD}; font-weight:600;")
+        lbl_fm.setStyleSheet(f"color:{theme.D.ACCENT}; font-weight:600; font-family:'{theme.D.FONT_UI}'; font-size:11px; letter-spacing:0.3px;")
         root.addWidget(lbl_fm)
         self._filters_list = QListWidget()
         root.addWidget(self._filters_list, 1)
@@ -293,7 +323,7 @@ class RuneTesterModal(QDialog):
         row = QHBoxLayout()
         row.setSpacing(6)
         lbl = QLabel(label_text)
-        lbl.setStyleSheet(f"color:{theme.COLOR_GOLD}; font-weight:600;")
+        lbl.setStyleSheet(f"color:{theme.D.ACCENT}; font-weight:600; font-family:'{theme.D.FONT_UI}'; font-size:11px; letter-spacing:0.3px;")
         lbl.setFixedWidth(160)
         row.addWidget(lbl)
         if widget is not None:

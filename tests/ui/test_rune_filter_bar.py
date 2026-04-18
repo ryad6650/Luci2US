@@ -1,5 +1,4 @@
 from ui.runes.rune_filter_bar import RuneFilterBar
-from models import SETS_FR
 
 
 def test_filter_bar_instantiates(qapp):
@@ -9,60 +8,65 @@ def test_filter_bar_instantiates(qapp):
 
 def test_defaults(qapp):
     w = RuneFilterBar()
-    assert w.selected_sets() == set(SETS_FR)
-    assert w.selected_slots() == {1, 2, 3, 4, 5, 6}
-    assert w.selected_stars() == {5, 6}
-    assert w.selected_grades() == {"Magique", "Rare", "Heroique", "Legendaire"}
-    assert w.focus_stat() is None
-    assert w.score_mode() == "Eff"
-    assert w.score_threshold() == 0
+    assert w.filter_set() is None
+    assert w.filter_slot() is None
+    assert w.filter_stars() is None
+    assert w.filter_rarity() is None
+    assert w.filter_level_min() == 0
+    assert w.filter_equipped() == "all"
 
 
-def test_changed_emits_on_slider(qapp):
+def test_changed_emits_on_level_slider(qapp):
     w = RuneFilterBar()
     received = []
     w.changed.connect(lambda: received.append(True))
-    w._score_slider.setValue(50)
+    w._level_slider.setValue(12)
     assert received
-    assert w.score_threshold() == 50
+    assert w.filter_level_min() == 12
 
 
-def test_changed_emits_on_star(qapp):
+def test_slot_pill_toggles_filter(qapp):
     w = RuneFilterBar()
-    received = []
-    w.changed.connect(lambda: received.append(True))
-    w._star5.setChecked(False)
-    assert received
-    assert w.selected_stars() == {6}
+    w._slot_btns[3].click()
+    assert w.filter_slot() == 3
+    w._slot_btns[3].click()
+    assert w.filter_slot() is None
 
 
-def test_focus_stat_returns_none_for_aucun(qapp):
+def test_stars_pill_toggles_filter(qapp):
     w = RuneFilterBar()
-    w._focus.setCurrentIndex(0)
-    assert w.focus_stat() is None
+    w._grade_btns[6].click()
+    assert w.filter_stars() == 6
+    w._grade_btns[6].click()
+    assert w.filter_stars() is None
 
 
-def test_focus_stat_returns_stat(qapp):
+def test_rarity_pill_selects_legendaire(qapp):
     w = RuneFilterBar()
-    w._focus.setCurrentText("VIT")
-    assert w.focus_stat() == "VIT"
+    w._rarity_btns["Legendaire"].click()
+    assert w.filter_rarity() == "Legendaire"
 
 
-def test_reset_to_defaults(qapp):
+def test_equipped_pill_selects_free(qapp):
     w = RuneFilterBar()
-    w._star5.setChecked(False)
-    w._score_slider.setValue(80)
-    w._focus.setCurrentText("VIT")
-    w.reset_to_defaults()
-    assert w.selected_stars() == {5, 6}
-    assert w.score_threshold() == 0
-    assert w.focus_stat() is None
+    w._equipped_btns["free"].click()
+    assert w.filter_equipped() == "free"
+
+
+def test_populate_sets_lists_options(qapp):
+    w = RuneFilterBar()
+    w.populate_sets(["Violent", "Rapide"])
+    # 3 = "Tous les sets" + 2 supplied
+    assert w._set_combo.count() == 3
 
 
 def test_reset_to_defaults_emits_single_changed(qapp):
     w = RuneFilterBar()
-    w._score_slider.setValue(80)
+    w._level_slider.setValue(12)
+    w._rarity_btns["Legendaire"].click()
     received = []
     w.changed.connect(lambda: received.append(True))
     w.reset_to_defaults()
     assert len(received) == 1
+    assert w.filter_level_min() == 0
+    assert w.filter_rarity() is None

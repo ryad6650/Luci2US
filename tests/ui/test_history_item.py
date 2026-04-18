@@ -1,6 +1,5 @@
 from models import Rune, SubStat, Verdict
-from ui.scan.history_item import HistoryItem
-from ui.widgets.tag_badge import TagKind
+from ui.scan.history_item import HistoryItem, TYPE_NEW, TYPE_UPGRADE
 
 
 def _make_rune() -> Rune:
@@ -11,23 +10,31 @@ def _make_rune() -> Rune:
     )
 
 
-def test_displays_set_and_level(qapp):
+def test_emits_click_signal(qapp):
     r = _make_rune()
-    v = Verdict(decision="KEEP", source="s2us", reason="")
-    w = HistoryItem(r, v)
-    assert "Violent" in w._name_label.text()
-    assert "+9" in w._sub_label.text()
+    v = Verdict(decision="KEEP", source="s2us", reason="", score=82.0)
+    w = HistoryItem(r, v, kind=TYPE_NEW)
+
+    received: list[tuple] = []
+    w.clicked.connect(lambda *args: received.append(args))
+    w.mousePressEvent(_fake_left_click())
+    assert len(received) == 1
+    assert received[0][0] is r
 
 
-def test_tag_matches_verdict(qapp):
+def test_kind_roundtrip(qapp):
     r = _make_rune()
-    v = Verdict(decision="SELL", source="s2us", reason="")
-    w = HistoryItem(r, v)
-    assert w._tag.text() == "SELL"
+    v = Verdict(decision="KEEP", source="s2us", reason="", score=82.0)
+    assert HistoryItem(r, v, kind=TYPE_NEW).kind == TYPE_NEW
+    assert HistoryItem(r, v, kind=TYPE_UPGRADE).kind == TYPE_UPGRADE
 
 
-def test_tag_powerup(qapp):
-    r = _make_rune()
-    v = Verdict(decision="PWR-UP", source="s2us", reason="")
-    w = HistoryItem(r, v)
-    assert w._tag.text() == "PWR"
+def _fake_left_click():
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    return QMouseEvent(
+        QMouseEvent.Type.MouseButtonPress,
+        QPointF(0, 0), QPointF(0, 0),
+        Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )

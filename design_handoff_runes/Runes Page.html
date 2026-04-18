@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Runes — Luci2US</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #f0eee9; }
+  * { box-sizing: border-box; }
+  select option { color: #f5ecef; }
+  input.luci-range { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px;
+    background: #2a1018; outline: none; cursor: pointer; }
+  input.luci-range::-webkit-slider-runnable-track { height: 4px; background: #2a1018; border-radius: 2px; }
+  input.luci-range::-moz-range-track { height: 4px; background: #2a1018; border-radius: 2px; }
+  input.luci-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+    width: 12px; height: 12px; border-radius: 50%; background: #f0689a; border: none; cursor: pointer;
+    margin-top: -4px; box-shadow: 0 0 8px rgba(240,104,154,0.4); }
+  input.luci-range::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%;
+    background: #f0689a; border: none; cursor: pointer; box-shadow: 0 0 8px rgba(240,104,154,0.4); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="monsters.jsx"></script>
+<script type="text/babel" src="runes.jsx"></script>
+<script type="text/babel">
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection title="Runes — Inventaire" subtitle="Tableau dense triable avec filtres (set, slot, grade, rareté, level, équipée) et side panel détail. Simulation d'équipement en modal.">
+          <DCArtboard label="Runes — vue tableau" width={1340} height={820}>
+            <RunesPage />
+          </DCArtboard>
+        </DCSection>
+        <DCPostIt top={260} left={40} rotate={-2} width={240}>
+          Tri par colonne cliquable (Slot, Grade, Set, Lv, %). Click rune = détail dans side panel. Bouton "Simuler sur un monstre" ouvre une modal.
+        </DCPostIt>
+      </DesignCanvas>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

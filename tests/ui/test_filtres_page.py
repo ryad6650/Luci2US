@@ -11,11 +11,12 @@ def test_filtres_page_instantiates(qapp):
     assert page is not None
 
 
-def test_filtres_page_has_splitter(qapp):
-    from PySide6.QtWidgets import QSplitter
+def test_filtres_page_has_list_and_editor(qapp):
+    from ui.filtres.filter_editor import FilterEditor
+    from ui.filtres.filter_list_panel import FilterListPanel
     page = FiltresPage()
-    splitters = page.findChildren(QSplitter)
-    assert len(splitters) >= 1
+    assert page.findChild(FilterListPanel) is not None
+    assert page.findChild(FilterEditor) is not None
 
 
 def test_filtres_page_loads_filters_from_config(qapp, tmp_path, monkeypatch):

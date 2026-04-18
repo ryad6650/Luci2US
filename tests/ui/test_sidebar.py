@@ -2,7 +2,7 @@ from ui.sidebar import Sidebar, NAV_ITEMS
 
 
 def test_nav_items_order_and_keys():
-    keys = [k for k, _ in NAV_ITEMS]
+    keys = [item[0] for item in NAV_ITEMS]
     assert keys == [
         "scan",
         "filters",
@@ -15,7 +15,7 @@ def test_nav_items_order_and_keys():
 
 
 def test_nav_items_labels_french():
-    labels = [label for _, label in NAV_ITEMS]
+    labels = [item[1] for item in NAV_ITEMS]
     assert any("Scan" in l for l in labels)
     assert any("Filtres" in l for l in labels)
     assert any("Runes" in l for l in labels)
@@ -27,7 +27,8 @@ def test_nav_items_labels_french():
 
 def test_sidebar_instantiates_with_all_buttons(qapp):
     sb = Sidebar()
-    for key, _ in NAV_ITEMS:
+    for item in NAV_ITEMS:
+        key = item[0]
         assert key in sb._buttons, f"missing button for key {key}"
 
 

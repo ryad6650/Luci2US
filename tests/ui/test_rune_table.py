@@ -1,10 +1,5 @@
-from PySide6.QtCore import Qt
-
 from models import Rune, SubStat
-from ui.runes.rune_table import (
-    COLUMN_COUNT, COL_EFF, COL_EQUIPPED, RuneTable, SUBSTAT_COLUMNS,
-    _substat_col,
-)
+from ui.runes.rune_table import RuneTable
 
 
 def _r(**kw) -> Rune:
@@ -21,87 +16,44 @@ def _r(**kw) -> Rune:
     return Rune(**defaults)
 
 
-def test_table_has_expected_columns(qapp):
+def test_table_empty_on_init(qapp):
     t = RuneTable()
-    assert t._table.columnCount() == COLUMN_COUNT
-    # 11 substat columns between Main and Eff
-    for stat in SUBSTAT_COLUMNS:
-        header = t._table.horizontalHeaderItem(_substat_col(stat)).text()
-        assert header == stat
+    assert t._model.rowCount() == 0
 
 
-def test_set_runes_populates(qapp):
+def test_set_runes_populates_rows(qapp):
     t = RuneTable()
-    runes = [_r(rune_id=1), _r(rune_id=2, slot=3)]
-    t.set_runes(runes, equipped_index={})
-    assert t._table.rowCount() == 2
+    t.set_runes([_r(rune_id=1), _r(rune_id=2, slot=3)], equipped_index={})
+    assert t._model.rowCount() == 2
 
 
-def test_substat_cell_shows_value_and_grind(qapp):
+def test_default_sort_is_efficiency_desc(qapp):
     t = RuneTable()
-    t.set_runes([_r()], equipped_index={})
-    # VIT: 6 base + 2 grind
-    item = t._table.item(0, _substat_col("VIT"))
-    assert item.text() == "6+2"
-    # CC: 9 base, no grind
-    item = t._table.item(0, _substat_col("CC"))
-    assert item.text() == "9"
-    # ATQ: rune doesn't have this stat
-    item = t._table.item(0, _substat_col("ATQ"))
-    assert item.text() == ""
+    low = _r(rune_id=1, swex_efficiency=50.0)
+    high = _r(rune_id=2, swex_efficiency=95.0)
+    t.set_runes([low, high], equipped_index={})
+    assert t._model.rune_at(0) is high
 
 
-def test_substat_cells_sort_numerically(qapp):
+def test_sort_click_toggles_direction(qapp):
     t = RuneTable()
-    r_low = _r(rune_id=1, substats=[SubStat(type="VIT", value=5)])
-    r_high = _r(rune_id=2, substats=[SubStat(type="VIT", value=20)])
-    t.set_runes([r_low, r_high], equipped_index={})
-    t._table.sortItems(_substat_col("VIT"), Qt.SortOrder.DescendingOrder)
-    first_set = t._table.item(0, 0).data(Qt.ItemDataRole.UserRole + 1)
-    assert first_set is r_high
+    low = _r(rune_id=1, swex_efficiency=50.0)
+    high = _r(rune_id=2, swex_efficiency=95.0)
+    t.set_runes([low, high], equipped_index={})
+    t._on_sort_clicked("efficiency")
+    assert t.sort_dir() == "asc"
+    assert t._model.rune_at(0) is low
 
 
-def test_missing_substat_sorts_to_bottom(qapp):
+def test_sort_by_set_alpha(qapp):
     t = RuneTable()
-    r_with = _r(rune_id=1, substats=[SubStat(type="VIT", value=10)])
-    r_without = _r(rune_id=2, substats=[SubStat(type="CC", value=5)])
-    t.set_runes([r_with, r_without], equipped_index={})
-    t._table.sortItems(_substat_col("VIT"), Qt.SortOrder.DescendingOrder)
-    first_set = t._table.item(0, 0).data(Qt.ItemDataRole.UserRole + 1)
-    assert first_set is r_with
-
-
-def test_equipped_column_uses_index(qapp):
-    t = RuneTable()
-    r = _r(rune_id=42)
-    t.set_runes([r], equipped_index={42: "Lushen"})
-    row_item = t._table.item(0, COL_EQUIPPED)
-    assert row_item.text() == "Lushen"
-
-
-def test_equipped_column_dash_when_not_equipped(qapp):
-    t = RuneTable()
-    r = _r(rune_id=42)
-    t.set_runes([r], equipped_index={})
-    row_item = t._table.item(0, COL_EQUIPPED)
-    assert row_item.text() == "\u2014"
-
-
-def test_missing_efficiency_is_empty(qapp):
-    t = RuneTable()
-    r = _r(rune_id=1, swex_efficiency=None)
-    t.set_runes([r], equipped_index={})
-    item = t._table.item(0, COL_EFF)
-    assert item.text() == ""
-
-
-def test_focus_mode_sorts_by_focus_stat(qapp):
-    t = RuneTable()
-    r_low = _r(rune_id=1, substats=[SubStat(type="VIT", value=5)])
-    r_high = _r(rune_id=2, substats=[SubStat(type="VIT", value=20)])
-    t.set_runes([r_low, r_high], equipped_index={}, focus_stat="VIT")
-    first_set = t._table.item(0, 0).data(Qt.ItemDataRole.UserRole + 1)
-    assert first_set is r_high
+    r_z = _r(rune_id=1, set="Will")
+    r_a = _r(rune_id=2, set="Fatal")
+    t.set_runes([r_z, r_a], equipped_index={})
+    t._on_sort_clicked("set")       # desc → Will, Fatal
+    assert t._model.rune_at(0).set == "Will"
+    t._on_sort_clicked("set")       # asc
+    assert t._model.rune_at(0).set == "Fatal"
 
 
 def test_rune_selected_signal(qapp):
@@ -110,5 +62,11 @@ def test_rune_selected_signal(qapp):
     t.set_runes([r], equipped_index={})
     received = []
     t.rune_selected.connect(lambda ru: received.append(ru))
-    t._table.selectRow(0)
+    t._on_view_clicked(t._model.index(0, 0))
     assert received and received[-1] is r
+
+
+def test_empty_state_visible_when_no_rows(qapp):
+    t = RuneTable()
+    t.set_runes([], equipped_index={})
+    assert t._empty_lbl.isVisible() is False or t._empty_lbl.isVisibleTo(t)

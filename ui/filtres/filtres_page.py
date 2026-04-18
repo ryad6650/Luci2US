@@ -6,7 +6,7 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QFileDialog, QSplitter, QVBoxLayout, QWidget,
+    QFileDialog, QHBoxLayout, QWidget,
 )
 
 from s2us_filter import S2USFilter, load_s2us_file
@@ -36,18 +36,14 @@ class FiltresPage(QWidget):
         self._global_settings: dict = {}
         self._filter_file_path: str = ""
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(8)
+        root = QHBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self._list_panel = FilterListPanel()
         self._editor = FilterEditor()
-        self._splitter.addWidget(self._list_panel)
-        self._splitter.addWidget(self._editor)
-        self._splitter.setSizes([260, 700])
-
-        root.addWidget(self._splitter)
+        root.addWidget(self._list_panel)
+        root.addWidget(self._editor, 1)
 
         self._load_filters_from_config()
         self._list_panel.set_filters(self._filters)
