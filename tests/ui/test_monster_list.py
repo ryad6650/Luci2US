@@ -125,3 +125,32 @@ def test_filters_combine(qapp):
     ml._stars_combo.setCurrentText(">=6")
     assert len(ml._rows) == 1
     assert ml._rows[0]._monster.name == "Laika"
+
+
+def test_monster_icon_loaded_via_monster_icons(qapp, monkeypatch, tmp_path):
+    from PySide6.QtGui import QPixmap
+    import monster_icons
+    called_with: list[int] = []
+
+    def fake_get_icon(uid: int):
+        called_with.append(uid)
+        p = QPixmap(1, 1)
+        p.fill()
+        path = tmp_path / f"{uid}.png"
+        p.save(str(path))
+        return path
+
+    monkeypatch.setattr(monster_icons, "get_monster_icon", fake_get_icon)
+
+    ml = MonsterList()
+    mon = _monster("Lushen")
+    mon.unit_master_id = 11211
+    ml.set_monsters([mon])
+    assert 11211 in called_with
+
+
+def test_refresh_icons_button_exists(qapp):
+    from PySide6.QtWidgets import QPushButton
+    ml = MonsterList()
+    btns = [b for b in ml.findChildren(QPushButton) if "Refresh" in b.text() or "icones" in b.text().lower()]
+    assert len(btns) >= 1

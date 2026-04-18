@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QScrollArea,
-    QVBoxLayout, QWidget,
+    QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QScrollArea, QVBoxLayout, QWidget,
 )
 
+import monster_icons
 from models import Monster
 from ui import theme
 
@@ -45,6 +47,17 @@ class _MonsterRow(QFrame):
             f"background:{theme.COLOR_BG_FRAME};"
             f"border:1px solid {theme.COLOR_BORDER_FRAME}; border-radius:3px;"
         )
+        try:
+            icon_path = monster_icons.get_monster_icon(monster.unit_master_id)
+            pix = QPixmap(str(icon_path))
+            if not pix.isNull():
+                self._icon.setPixmap(pix.scaled(
+                    48, 48,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                ))
+        except Exception:
+            pass
         row.addWidget(self._icon)
 
         name = QLabel(monster.name)
@@ -116,6 +129,11 @@ class MonsterList(QWidget):
         self._name_search.textChanged.connect(self._refresh_visible)
         filters.addWidget(self._name_search, 1)
 
+        self._refresh_btn = QPushButton("Refresh icones Swarfarm")
+        self._refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._refresh_btn.clicked.connect(self._on_refresh_icons)
+        filters.addWidget(self._refresh_btn)
+
         outer.addLayout(filters)
 
         self._scroll = QScrollArea()
@@ -162,3 +180,14 @@ class MonsterList(QWidget):
             self._rows.append(row)
             self._rows_layout.insertWidget(stretch_index, row)
             stretch_index += 1
+
+    def _on_refresh_icons(self) -> None:
+        self._refresh_btn.setEnabled(False)
+        self._refresh_btn.setText("Telechargement...")
+
+        def on_done():
+            self._refresh_btn.setEnabled(True)
+            self._refresh_btn.setText("Refresh icones Swarfarm")
+            self._refresh_visible()
+
+        monster_icons.download_icons_async(on_done=on_done)
