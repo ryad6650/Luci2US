@@ -12,6 +12,7 @@ from profile_store import load_profile_payload
 from ui import theme
 from ui.controllers.scan_controller import ScanController
 from ui.filtres.filtres_page import FiltresPage
+from ui.monsters.monsters_page import MonstersPage
 from ui.profile.profile_page import ProfilePage
 from ui.settings.settings_page import SettingsPage
 from ui.sidebar import Sidebar
@@ -62,8 +63,9 @@ class MainWindow(QMainWindow):
         self._stack.addWidget(self.filtres_page)
         # Index 2 : Runes (placeholder, Plan 3)
         self._stack.addWidget(_placeholder("Runes - a implementer"))
-        # Index 3 : Monstres (placeholder, Plan 2)
-        self._stack.addWidget(_placeholder("Monstres - a implementer"))
+        # Index 3 : Monstres
+        self.monsters_page = MonstersPage()
+        self._stack.addWidget(self.monsters_page)
         # Index 4 : Stats & Historique (placeholder, Plan 4)
         self._stack.addWidget(_placeholder("Stats & Historique - a implementer"))
         # Index 5 : Profils
@@ -92,6 +94,10 @@ class MainWindow(QMainWindow):
             self.profile_page.apply_profile,
             type=Qt.ConnectionType.QueuedConnection,
         )
+        self.controller.profile_loaded.connect(
+            self.monsters_page.apply_profile,
+            type=Qt.ConnectionType.QueuedConnection,
+        )
         self.controller.state_changed.connect(
             self.scan_page.set_active,
             type=Qt.ConnectionType.QueuedConnection,
@@ -110,6 +116,7 @@ class MainWindow(QMainWindow):
             return
         profile["source"] = "cache"
         self.profile_page.apply_profile(profile, saved_at)
+        self.monsters_page.apply_profile(profile, saved_at)
 
     def _on_nav(self, key: str) -> None:
         index = {
