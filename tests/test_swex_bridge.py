@@ -202,6 +202,35 @@ class TestSWEXBridge:
         assert received[0]["unit_list"][0]["name"] == "Belladeon"
         assert received[0]["runes"][0]["set_id"] == 13
 
+    def test_profile_redispatched_on_file_update(self, tmp_path):
+        """Overwriting an already-seen profile file should re-trigger on_profile_loaded."""
+        received: list[dict] = []
+        bridge = SWEXBridge(
+            drops_dir=tmp_path,
+            on_profile_loaded=lambda data: received.append(data),
+            poll_interval=0.05,
+        )
+        bridge.start()
+        try:
+            pf = tmp_path / "profile_123.json"
+            pf.write_text(json.dumps({"wizard_info": {"wizard_id": 123}, "unit_list": [], "runes": []}),
+                          encoding="utf-8")
+            time.sleep(0.2)
+            assert len(received) == 1
+
+            # Advance mtime and overwrite
+            import os as _os
+            now = time.time() + 2.0
+            pf.write_text(json.dumps({"wizard_info": {"wizard_id": 123}, "unit_list": [{"unit_id": 42}], "runes": []}),
+                          encoding="utf-8")
+            _os.utime(pf, (now, now))
+            time.sleep(0.2)
+        finally:
+            bridge.stop()
+
+        assert len(received) == 2
+        assert received[1]["unit_list"][0]["unit_id"] == 42
+
     def test_profile_not_dispatched_as_rune(self, tmp_path):
         """A profile file should NOT trigger on_rune_drop."""
         runes: list[Rune] = []

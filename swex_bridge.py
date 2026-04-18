@@ -114,6 +114,7 @@ class SWEXBridge:
         self._poll_interval = poll_interval
         self._seen: set[str] = set()
         self._last_mtime: float = 0.0
+        self._profile_mtimes: dict[str, float] = {}
         self._running = False
         self._thread: threading.Thread | None = None
 
@@ -157,7 +158,7 @@ class SWEXBridge:
         except OSError:
             return
         for name in entries:
-            if name in self._seen or not name.endswith(".json"):
+            if not name.endswith(".json"):
                 continue
 
             path = self.drops_dir / name
@@ -172,7 +173,18 @@ class SWEXBridge:
                 if mtime <= self._last_mtime:
                     continue
                 self._last_mtime = mtime
+            elif name.startswith("profile_"):
+                # Profile files get overwritten on re-login; track per-file mtime.
+                try:
+                    mtime = os.path.getmtime(path)
+                except OSError:
+                    continue
+                if mtime <= self._profile_mtimes.get(name, 0.0):
+                    continue
+                self._profile_mtimes[name] = mtime
             else:
+                if name in self._seen:
+                    continue
                 self._seen.add(name)
 
             try:
