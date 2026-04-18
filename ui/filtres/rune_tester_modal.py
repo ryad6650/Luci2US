@@ -22,6 +22,7 @@ _DISPLAY_TO_FR = {
     "CD": "DC", "CR": "CC", "ACC": "PRE", "RES": "RES",
 }
 _FR_TO_DISPLAY = {v: k for k, v in _DISPLAY_TO_FR.items()}
+_FIXED_MAIN_BY_SLOT = {1: "ATK", 3: "DEF", 5: "HP"}
 _SETS = ["Violent", "Swift", "Despair", "Will", "Rage", "Fatal",
          "Energy", "Blade", "Focus", "Guard", "Endure",
          "Revenge", "Nemesis", "Vampire", "Destroy", "Fight",
@@ -82,6 +83,9 @@ class RuneTesterModal(QDialog):
         form.addRow("Grade", self._grade_combo)
         form.addRow("Main stat", self._main_combo)
 
+        self._slot_spin.valueChanged.connect(self._on_slot_changed)
+        self._on_slot_changed(self._slot_spin.value())
+
         self._sub_stats: list[tuple[QComboBox, QSpinBox]] = []
         for i in range(4):
             row = QHBoxLayout()
@@ -132,6 +136,14 @@ class RuneTesterModal(QDialog):
             f" border:1px solid {theme.COLOR_BORDER_FRAME}; }}"
         )
         lay.addWidget(self._filters_list, 1)
+
+    def _on_slot_changed(self, slot: int) -> None:
+        forced = _FIXED_MAIN_BY_SLOT.get(int(slot))
+        if forced is None:
+            self._main_combo.setEnabled(True)
+            return
+        self._main_combo.setCurrentText(forced)
+        self._main_combo.setEnabled(False)
 
     @staticmethod
     def _row_wrap(row_lay) -> QWidget:
