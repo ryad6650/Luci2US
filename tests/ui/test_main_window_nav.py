@@ -62,3 +62,29 @@ def test_profile_loaded_signal_feeds_monsters_page(qapp):
     }
     mw.monsters_page.apply_profile(profile, 0.0)
     assert len(mw.monsters_page._list._rows) == 1
+
+
+def test_profile_import_flows_to_profile_and_monsters(qapp, monkeypatch, tmp_path):
+    import json
+
+    mw = MainWindow()
+
+    payload = {
+        "wizard_info": {"wizard_name": "Lucius", "wizard_level": 42},
+        "unit_list": [
+            {"unit_master_id": 11211, "attribute": 3, "class": 6, "unit_level": 40, "runes": []},
+        ],
+        "runes": [],
+    }
+    fixture = tmp_path / "lucius.json"
+    fixture.write_text(json.dumps(payload), encoding="utf-8")
+
+    from ui import main_window as main_window_module
+    monkeypatch.setattr(main_window_module, "save_profile_payload", lambda _p: None)
+
+    mw.profile_page.import_requested.emit(str(fixture))
+
+    assert mw.profile_page._name.text() == "Lucius"
+    assert mw.profile_page._cell_level._value.text() == "42"
+    assert mw.profile_page._cell_monsters._value.text() == "1"
+    assert len(mw.monsters_page._list._rows) == 1

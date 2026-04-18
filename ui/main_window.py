@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from profile_loader import load_profile_from_dict
-from profile_store import load_profile_payload
+from profile_store import load_profile_payload, save_profile_payload
 from ui import theme
 from ui.controllers.scan_controller import ScanController
 from ui.filtres.filtres_page import FiltresPage
@@ -103,6 +103,8 @@ class MainWindow(QMainWindow):
             type=Qt.ConnectionType.QueuedConnection,
         )
 
+        self.profile_page.import_requested.connect(self._on_profile_import)
+
         self._restore_cached_profile()
 
     def _restore_cached_profile(self) -> None:
@@ -117,6 +119,33 @@ class MainWindow(QMainWindow):
         profile["source"] = "cache"
         self.profile_page.apply_profile(profile, saved_at)
         self.monsters_page.apply_profile(profile, saved_at)
+
+    def _on_profile_import(self, path: str) -> None:
+        import datetime
+        import json
+        import os
+        try:
+            with open(path, encoding="utf-8") as f:
+                payload = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return
+        try:
+            save_profile_payload(payload)
+        except OSError:
+            pass
+        try:
+            profile = load_profile_from_dict(payload)
+        except Exception:
+            return
+        profile["source"] = "manual"
+        try:
+            mtime = datetime.datetime.fromtimestamp(
+                os.path.getmtime(path)
+            ).isoformat(timespec="seconds")
+        except OSError:
+            mtime = ""
+        self.profile_page.apply_profile(profile, mtime)
+        self.monsters_page.apply_profile(profile, mtime)
 
     def _on_nav(self, key: str) -> None:
         index = {
