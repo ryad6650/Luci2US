@@ -21,23 +21,57 @@ from s2us_filter import S2USFilter, _STAT_KEYS
 from ui import theme
 
 
+_EDITOR_QSS = f"""
+FilterEditor {{ background: transparent; }}
+QCheckBox {{ color:{theme.COLOR_TEXT_MAIN}; background: transparent; spacing:6px; }}
+QCheckBox::indicator {{
+    width: 14px; height: 14px;
+    border: 1px solid {theme.COLOR_BORDER_FRAME};
+    background: {theme.COLOR_BG_FRAME};
+    border-radius: 2px;
+}}
+QCheckBox::indicator:hover {{ border: 1px solid {theme.COLOR_GOLD}; }}
+QCheckBox::indicator:checked {{
+    background: {theme.COLOR_GOLD};
+    border: 1px solid {theme.COLOR_GOLD};
+    image: none;
+}}
+QRadioButton {{ color:{theme.COLOR_TEXT_MAIN}; background: transparent; spacing:6px; }}
+QRadioButton::indicator {{
+    width: 14px; height: 14px;
+    border: 1px solid {theme.COLOR_BORDER_FRAME};
+    background: {theme.COLOR_BG_FRAME};
+    border-radius: 8px;
+}}
+QRadioButton::indicator:hover {{ border: 1px solid {theme.COLOR_GOLD}; }}
+QRadioButton::indicator:checked {{
+    background: {theme.COLOR_GOLD};
+    border: 1px solid {theme.COLOR_GOLD};
+}}
+"""
+
+
 class FilterEditor(QWidget):
     filter_saved = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setStyleSheet(f"background:{theme.COLOR_BG_APP};")
+        self.setStyleSheet(_EDITOR_QSS)
 
         self._current: S2USFilter | None = None
 
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("QScrollArea { border: none; }")
+        scroll.setStyleSheet(
+            "QScrollArea { border: none; background: transparent; }"
+            "QScrollArea > QWidget > QWidget { background: transparent; }"
+        )
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(scroll)
 
         inner = QWidget()
+        inner.setStyleSheet("background: transparent;")
         scroll.setWidget(inner)
         self._inner_lay = QVBoxLayout(inner)
         self._inner_lay.setContentsMargins(18, 14, 18, 14)
@@ -62,7 +96,7 @@ class FilterEditor(QWidget):
     def _framed_block(self, title: str) -> tuple[QFrame, QVBoxLayout]:
         fr = QFrame()
         fr.setStyleSheet(
-            f"QFrame {{ background:{theme.COLOR_BG_FRAME};"
+            f"QFrame {{ background:rgba(18, 10, 5, 180);"
             f" border:1px solid {theme.COLOR_BORDER_FRAME}; border-radius:4px; }}"
         )
         box = QVBoxLayout(fr)
@@ -96,7 +130,6 @@ class FilterEditor(QWidget):
         self._rar_hero = QCheckBox("Hero")
         self._rar_legend = QCheckBox("Legend")
         for cb in (self._rar_rare, self._rar_hero, self._rar_legend):
-            cb.setStyleSheet(f"QCheckBox {{ color:{theme.COLOR_TEXT_MAIN}; }}")
             row.addWidget(cb)
         row.addStretch()
         box.addLayout(row)
@@ -107,7 +140,6 @@ class FilterEditor(QWidget):
         self._slot_checks: dict[int, QCheckBox] = {}
         for i in range(1, 7):
             cb = QCheckBox(f"Slot {i}")
-            cb.setStyleSheet(f"QCheckBox {{ color:{theme.COLOR_TEXT_MAIN}; }}")
             self._slot_checks[i] = cb
             grid.addWidget(cb, (i - 1) // 3, (i - 1) % 3)
         box.addLayout(grid)
@@ -118,7 +150,6 @@ class FilterEditor(QWidget):
         self._star5 = QCheckBox("5\u2605")
         self._star6 = QCheckBox("6\u2605")
         for cb in (self._star5, self._star6):
-            cb.setStyleSheet(f"QCheckBox {{ color:{theme.COLOR_TEXT_MAIN}; }}")
             row.addWidget(cb)
         row.addStretch()
         box.addLayout(row)
@@ -131,7 +162,6 @@ class FilterEditor(QWidget):
         rb_anc = QRadioButton("Ancient")
         rb_nor = QRadioButton("Normal")
         for cb in (rb_all, rb_anc, rb_nor):
-            cb.setStyleSheet(f"QRadioButton {{ color:{theme.COLOR_TEXT_MAIN}; }}")
             row.addWidget(cb)
         row.addStretch()
         self._ancient_group.addButton(rb_all, 0)
@@ -150,7 +180,6 @@ class FilterEditor(QWidget):
         ]
         for i, k in enumerate(main_keys):
             cb = QCheckBox(k.replace("Main", ""))
-            cb.setStyleSheet(f"QCheckBox {{ color:{theme.COLOR_TEXT_MAIN}; }}")
             self._main_checks[k] = cb
             grid.addWidget(cb, i // 4, i % 4)
         box.addLayout(grid)
@@ -161,7 +190,6 @@ class FilterEditor(QWidget):
         self._innate_checks: dict[str, QCheckBox] = {}
         for i, k in enumerate(_STAT_KEYS):
             cb = QCheckBox(k)
-            cb.setStyleSheet(f"QCheckBox {{ color:{theme.COLOR_TEXT_MAIN}; }}")
             self._innate_checks[k] = cb
             grid.addWidget(cb, i // 4, i % 4)
         box.addLayout(grid)
@@ -219,6 +247,23 @@ class FilterEditor(QWidget):
 
     def _build_subs(self) -> None:
         _, box = self._framed_block("Sous-proprietes")
+
+        legend = QLabel(
+            f"<span style='color:{theme.COLOR_TEXT_DIM};'>"
+            f"{_STATE_GLYPHS[0]} ignoree"
+            f"</span>"
+            f" &nbsp;&nbsp; "
+            f"<span style='color:{theme.COLOR_GOLD}; font-weight:700;'>"
+            f"{_STATE_GLYPHS[1]} obligatoire"
+            f"</span>"
+            f" &nbsp;&nbsp; "
+            f"<span style='color:{theme.COLOR_EMBER}; font-weight:700;'>"
+            f"{_STATE_GLYPHS[2]} optionnelle"
+            f"</span>"
+        )
+        legend.setTextFormat(Qt.TextFormat.RichText)
+        box.addWidget(legend)
+
         container = QHBoxLayout()
         rows_box = QVBoxLayout()
         rows_box.setSpacing(2)
@@ -237,7 +282,6 @@ class FilterEditor(QWidget):
         self._optional_group = QButtonGroup(self)
         for n in (1, 2, 3, 4):
             rb = QRadioButton(str(n))
-            rb.setStyleSheet(f"QRadioButton {{ color:{theme.COLOR_TEXT_MAIN}; }}")
             self._optional_group.addButton(rb, n)
             side.addWidget(rb)
         side.addStretch()
@@ -249,9 +293,6 @@ class FilterEditor(QWidget):
         row = QHBoxLayout()
         row.setSpacing(12)
         self._enabled_check = QCheckBox()
-        self._enabled_check.setStyleSheet(
-            f"QCheckBox {{ color:{theme.COLOR_TEXT_MAIN}; }}"
-        )
         row.addWidget(self._enabled_check)
 
         lbl = QLabel("Nom :")
@@ -271,7 +312,7 @@ class FilterEditor(QWidget):
     def _build_sets(self) -> None:
         self._sets_frame = QFrame()
         self._sets_frame.setStyleSheet(
-            f"QFrame {{ background:{theme.COLOR_BG_FRAME};"
+            f"QFrame {{ background:rgba(18, 10, 5, 180);"
             f" border:1px solid {theme.COLOR_BORDER_FRAME}; border-radius:4px; }}"
         )
         box = QVBoxLayout(self._sets_frame)
@@ -289,7 +330,6 @@ class FilterEditor(QWidget):
         for i, set_fr in enumerate(SETS_FR):
             set_en = SET_FR_TO_EN[set_fr]
             cb = QCheckBox(set_en)
-            cb.setStyleSheet(f"QCheckBox {{ color:{theme.COLOR_TEXT_MAIN}; }}")
             self._set_checks[set_en] = cb
             grid.addWidget(cb, i // 6, i % 6)
         box.addLayout(grid)
@@ -381,7 +421,23 @@ class FilterEditor(QWidget):
         )
 
 
-_STATE_GLYPHS = {0: "\u2610", 1: "\u2611", 2: "\u2796"}
+_STATE_GLYPHS = {0: "\u2610", 1: "\u2714", 2: "\u2605"}
+_STATE_COLORS = {
+    0: theme.COLOR_TEXT_DIM,
+    1: theme.COLOR_GOLD,
+    2: theme.COLOR_EMBER,
+}
+
+
+def _state_btn_qss(state: int) -> str:
+    color = _STATE_COLORS[state]
+    return (
+        f"QPushButton {{ background: rgba(18, 10, 5, 160);"
+        f" color: {color};"
+        f" border: 1px solid {theme.COLOR_BORDER_FRAME};"
+        f" border-radius: 3px; font-size: 14px; font-weight: 700; }}"
+        f"QPushButton:hover {{ border: 1px solid {theme.COLOR_GOLD}; }}"
+    )
 
 
 class _SubRow(QWidget):
@@ -397,7 +453,8 @@ class _SubRow(QWidget):
         row.setSpacing(6)
 
         self.state_btn = QPushButton(_STATE_GLYPHS[0])
-        self.state_btn.setFixedWidth(30)
+        self.state_btn.setFixedWidth(34)
+        self.state_btn.setStyleSheet(_state_btn_qss(0))
         self.state_btn.clicked.connect(self._cycle)
         row.addWidget(self.state_btn)
 
@@ -436,3 +493,4 @@ class _SubRow(QWidget):
     def set_state(self, s: int) -> None:
         self.state = s
         self.state_btn.setText(_STATE_GLYPHS[s])
+        self.state_btn.setStyleSheet(_state_btn_qss(s))

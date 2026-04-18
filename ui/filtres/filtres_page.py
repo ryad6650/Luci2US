@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
 
 from s2us_filter import S2USFilter, load_s2us_file
 from s2us_writer import save_s2us_file
-from ui import theme
 from ui.filtres.filter_editor import FilterEditor
 from ui.filtres.filter_list_panel import FilterListPanel
 from ui.filtres.rune_tester_modal import RuneTesterModal
@@ -32,7 +31,6 @@ def _read_config() -> dict:
 class FiltresPage(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setStyleSheet(f"background:{theme.COLOR_BG_APP};")
 
         self._filters: list[S2USFilter] = []
         self._global_settings: dict = {}
