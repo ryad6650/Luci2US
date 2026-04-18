@@ -6,12 +6,13 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QFileDialog, QLabel, QSplitter, QVBoxLayout, QWidget,
+    QFileDialog, QSplitter, QVBoxLayout, QWidget,
 )
 
 from s2us_filter import S2USFilter, load_s2us_file
 from s2us_writer import save_s2us_file
 from ui import theme
+from ui.filtres.filter_editor import FilterEditor
 from ui.filtres.filter_list_panel import FilterListPanel
 from ui.filtres.rune_tester_modal import RuneTesterModal
 
@@ -43,13 +44,9 @@ class FiltresPage(QWidget):
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self._list_panel = FilterListPanel()
-        self._right_placeholder = QLabel("FilterEditor (Task 6-9)")
-        self._right_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._right_placeholder.setStyleSheet(
-            f"color:{theme.COLOR_TEXT_DIM}; background:{theme.COLOR_BG_FRAME};"
-        )
+        self._editor = FilterEditor()
         self._splitter.addWidget(self._list_panel)
-        self._splitter.addWidget(self._right_placeholder)
+        self._splitter.addWidget(self._editor)
         self._splitter.setSizes([260, 700])
 
         root.addWidget(self._splitter)
@@ -59,6 +56,7 @@ class FiltresPage(QWidget):
         self._list_panel.filter_added.connect(self._on_filter_added)
         self._list_panel.filter_removed.connect(self._on_filter_removed)
         self._list_panel.filter_moved.connect(self._on_filter_moved)
+        self._list_panel.filter_selected.connect(self._on_filter_selected)
         self._list_panel.import_requested.connect(self._on_import)
         self._list_panel.export_requested.connect(self._on_export)
         self._list_panel.test_requested.connect(self._on_test)
@@ -101,6 +99,10 @@ class FiltresPage(QWidget):
         self._filters.insert(dst, item)
         self._list_panel.set_filters(self._filters)
         self._list_panel.select_index(dst)
+
+    def _on_filter_selected(self, idx: int) -> None:
+        if 0 <= idx < len(self._filters):
+            self._editor.load_filter(self._filters[idx])
 
     def _on_import(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
