@@ -45,3 +45,47 @@ def test_filtres_page_handles_missing_config(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(filtres_page, "_CONFIG_PATH", str(cfg_path))
     page = FiltresPage()
     assert page._filters == []
+
+
+def test_page_adds_filter_on_panel_add_signal(qapp, tmp_path, monkeypatch):
+    cfg_path = tmp_path / "missing.json"
+    from ui.filtres import filtres_page
+    monkeypatch.setattr(filtres_page, "_CONFIG_PATH", str(cfg_path))
+    page = FiltresPage()
+    assert page._filters == []
+    page._list_panel.filter_added.emit()
+    assert len(page._filters) == 1
+    assert page._filters[0].name == "Nouveau filtre"
+    assert page._filters[0].enabled is True
+
+
+def test_page_removes_filter_on_panel_remove_signal(qapp, tmp_path, monkeypatch):
+    from s2us_filter import S2USFilter
+    cfg_path = tmp_path / "missing.json"
+    from ui.filtres import filtres_page
+    monkeypatch.setattr(filtres_page, "_CONFIG_PATH", str(cfg_path))
+    page = FiltresPage()
+    page._filters = [
+        S2USFilter(name="A", enabled=True, sub_requirements={}, min_values={}),
+        S2USFilter(name="B", enabled=True, sub_requirements={}, min_values={}),
+        S2USFilter(name="C", enabled=True, sub_requirements={}, min_values={}),
+    ]
+    page._list_panel.set_filters(page._filters)
+    page._list_panel.filter_removed.emit(1)
+    assert [f.name for f in page._filters] == ["A", "C"]
+
+
+def test_page_moves_filter_on_panel_move_signal(qapp, tmp_path, monkeypatch):
+    from s2us_filter import S2USFilter
+    cfg_path = tmp_path / "missing.json"
+    from ui.filtres import filtres_page
+    monkeypatch.setattr(filtres_page, "_CONFIG_PATH", str(cfg_path))
+    page = FiltresPage()
+    page._filters = [
+        S2USFilter(name="A", enabled=True, sub_requirements={}, min_values={}),
+        S2USFilter(name="B", enabled=True, sub_requirements={}, min_values={}),
+        S2USFilter(name="C", enabled=True, sub_requirements={}, min_values={}),
+    ]
+    page._list_panel.set_filters(page._filters)
+    page._list_panel.filter_moved.emit(2, 0)
+    assert [f.name for f in page._filters] == ["C", "A", "B"]

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from s2us_filter import S2USFilter, load_s2us_file
 from ui import theme
+from ui.filtres.filter_list_panel import FilterListPanel
 
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -39,23 +40,23 @@ class FiltresPage(QWidget):
         root.setSpacing(8)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
-        self._left_placeholder = QLabel("FilterListPanel (Task 4)")
-        self._left_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._left_placeholder.setStyleSheet(
-            f"color:{theme.COLOR_TEXT_DIM}; background:{theme.COLOR_BG_FRAME};"
-        )
+        self._list_panel = FilterListPanel()
         self._right_placeholder = QLabel("FilterEditor (Task 6-9)")
         self._right_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._right_placeholder.setStyleSheet(
             f"color:{theme.COLOR_TEXT_DIM}; background:{theme.COLOR_BG_FRAME};"
         )
-        self._splitter.addWidget(self._left_placeholder)
+        self._splitter.addWidget(self._list_panel)
         self._splitter.addWidget(self._right_placeholder)
         self._splitter.setSizes([260, 700])
 
         root.addWidget(self._splitter)
 
         self._load_filters_from_config()
+        self._list_panel.set_filters(self._filters)
+        self._list_panel.filter_added.connect(self._on_filter_added)
+        self._list_panel.filter_removed.connect(self._on_filter_removed)
+        self._list_panel.filter_moved.connect(self._on_filter_moved)
 
     def _load_filters_from_config(self) -> None:
         cfg = _read_config()
@@ -70,3 +71,28 @@ class FiltresPage(QWidget):
         except (OSError, json.JSONDecodeError):
             self._filters = []
             self._global_settings = {}
+
+    def _on_filter_added(self) -> None:
+        new = S2USFilter(name="Nouveau filtre", enabled=True,
+                         sub_requirements={}, min_values={})
+        self._filters.append(new)
+        self._list_panel.set_filters(self._filters)
+        self._list_panel.select_index(len(self._filters) - 1)
+
+    def _on_filter_removed(self, idx: int) -> None:
+        if not (0 <= idx < len(self._filters)):
+            return
+        del self._filters[idx]
+        self._list_panel.set_filters(self._filters)
+        if self._filters:
+            self._list_panel.select_index(min(idx, len(self._filters) - 1))
+
+    def _on_filter_moved(self, src: int, dst: int) -> None:
+        if not (0 <= src < len(self._filters)):
+            return
+        if not (0 <= dst < len(self._filters)):
+            return
+        item = self._filters.pop(src)
+        self._filters.insert(dst, item)
+        self._list_panel.set_filters(self._filters)
+        self._list_panel.select_index(dst)
