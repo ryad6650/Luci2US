@@ -13,8 +13,15 @@ from s2us_filter import S2USFilter
 from ui import theme
 
 
-_STATS = ["VIT", "PV%", "PV", "ATQ%", "ATQ", "DEF%", "DEF",
-          "DC", "CC", "PRE", "RES"]
+_STATS_DISPLAY = ["SPD", "HP%", "HP", "ATK%", "ATK", "DEF%", "DEF",
+                  "CD", "CR", "ACC", "RES"]
+_DISPLAY_TO_FR = {
+    "SPD": "VIT", "HP%": "PV%", "HP": "PV",
+    "ATK%": "ATQ%", "ATK": "ATQ",
+    "DEF%": "DEF%", "DEF": "DEF",
+    "CD": "DC", "CR": "CC", "ACC": "PRE", "RES": "RES",
+}
+_FR_TO_DISPLAY = {v: k for k, v in _DISPLAY_TO_FR.items()}
 _SETS = ["Violent", "Swift", "Despair", "Will", "Rage", "Fatal",
          "Energy", "Blade", "Focus", "Guard", "Endure",
          "Revenge", "Nemesis", "Vampire", "Destroy", "Fight",
@@ -33,7 +40,17 @@ class RuneTesterModal(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Rune Optimizer")
         self.resize(560, 560)
-        self.setStyleSheet(f"background:{theme.COLOR_BG_APP};")
+        self.setStyleSheet(
+            f"QDialog {{ background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
+            f" stop:0 {theme.COLOR_BG_GRAD_HI},"
+            f" stop:1 {theme.COLOR_BG_GRAD_LO});"
+            f" border: 1px solid {theme.COLOR_BORDER_FRAME}; }}"
+            f"QLabel {{ color:{theme.COLOR_TEXT_MAIN}; background: transparent; }}"
+            f"QComboBox, QSpinBox {{ background:{theme.COLOR_BG_FRAME};"
+            f" color:{theme.COLOR_TEXT_MAIN};"
+            f" border:1px solid {theme.COLOR_BORDER_FRAME};"
+            f" border-radius:3px; padding:3px 6px; }}"
+        )
         self._filters = filters or []
 
         lay = QVBoxLayout(self)
@@ -56,7 +73,7 @@ class RuneTesterModal(QDialog):
         self._grade_combo = QComboBox()
         self._grade_combo.addItems(_GRADES)
         self._main_combo = QComboBox()
-        self._main_combo.addItems(_STATS)
+        self._main_combo.addItems(_STATS_DISPLAY)
 
         form.addRow("Set", self._set_combo)
         form.addRow("Slot", self._slot_spin)
@@ -69,7 +86,7 @@ class RuneTesterModal(QDialog):
         for i in range(4):
             row = QHBoxLayout()
             ctype = QComboBox()
-            ctype.addItems([""] + _STATS)
+            ctype.addItems([""] + _STATS_DISPLAY)
             cval = QSpinBox()
             cval.setRange(0, 999)
             row.addWidget(ctype)
@@ -130,12 +147,13 @@ class RuneTesterModal(QDialog):
         self._level_spin.setValue(int(rune.level))
         if rune.grade in _GRADES:
             self._grade_combo.setCurrentText(rune.grade)
-        if rune.main_stat.type in _STATS:
-            self._main_combo.setCurrentText(rune.main_stat.type)
+        main_disp = _FR_TO_DISPLAY.get(rune.main_stat.type, rune.main_stat.type)
+        if main_disp in _STATS_DISPLAY:
+            self._main_combo.setCurrentText(main_disp)
         for i, (ctype, cval) in enumerate(self._sub_stats):
             if i < len(rune.substats):
                 s = rune.substats[i]
-                ctype.setCurrentText(s.type)
+                ctype.setCurrentText(_FR_TO_DISPLAY.get(s.type, s.type))
                 cval.setValue(int(s.value))
             else:
                 ctype.setCurrentIndex(0)
@@ -146,14 +164,21 @@ class RuneTesterModal(QDialog):
         for ctype, cval in self._sub_stats:
             t = ctype.currentText()
             if t:
-                subs.append(SubStat(type=t, value=float(cval.value())))
+                subs.append(SubStat(
+                    type=_DISPLAY_TO_FR.get(t, t),
+                    value=float(cval.value()),
+                ))
+        main_disp = self._main_combo.currentText()
         return Rune(
             set=self._set_combo.currentText(),
             slot=int(self._slot_spin.value()),
             stars=int(self._stars_spin.value()),
             grade=self._grade_combo.currentText(),
             level=int(self._level_spin.value()),
-            main_stat=SubStat(type=self._main_combo.currentText(), value=0.0),
+            main_stat=SubStat(
+                type=_DISPLAY_TO_FR.get(main_disp, main_disp),
+                value=0.0,
+            ),
             prefix=None,
             substats=subs,
         )
@@ -170,7 +195,8 @@ class RuneTesterModal(QDialog):
             mode = "Meilleure amelioration immediate"
 
         subs_txt = ", ".join(
-            f"{s.type} {int(s.value)}" for s in result.rune.substats
+            f"{_FR_TO_DISPLAY.get(s.type, s.type)} {int(s.value)}"
+            for s in result.rune.substats
         )
         self._result_label.setText(
             f"{mode}\nEff1 = {int(result.efficiency)}\n{subs_txt}"
