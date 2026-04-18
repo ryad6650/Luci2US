@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DROPS_DIR = path.join(__dirname, 'drops');
+const DROPS_DIR = path.join(__dirname, '..', 'rune-bot-drops');
 
 const WATCHED_EVENTS = [
   'BattleDungeonResult_v2',

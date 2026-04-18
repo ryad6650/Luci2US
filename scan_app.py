@@ -18,6 +18,7 @@ from auto_mode import AutoMode, State
 from models import Rune, Verdict
 from profile_loader import load_profile_from_dict
 from profile_store import save_profile_payload
+from swex_bridge import detect_drops_dir
 from ui.main_window import MainWindow
 
 
@@ -55,10 +56,7 @@ DEFAULT_CONFIG = {
     "db_path": "history.db",
     "lang": "FR",
     "swex": {
-        "drops_dir": os.path.join(
-            os.path.expanduser("~"),
-            "AppData", "Local", "Programs", "sw-exporter", "rune-bot-drops",
-        ),
+        "drops_dir": detect_drops_dir(),
         "poll_interval": 0.5,
     },
     "s2us": {"filter_file": "", "artifact_eff_threshold": 70},

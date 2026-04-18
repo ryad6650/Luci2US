@@ -15,6 +15,7 @@ from ui.controllers.scan_controller import ScanController
 from ui.filtres.filtres_page import FiltresPage
 from ui.monsters.monsters_page import MonstersPage
 from ui.profile.profile_page import ProfilePage
+from ui.runes.runes_page import RunesPage
 from ui.settings.settings_page import SettingsPage
 from ui.sidebar import Sidebar
 from ui.scan.scan_page import ScanPage
@@ -62,8 +63,9 @@ class MainWindow(QMainWindow):
         # Index 1 : Filtres
         self.filtres_page = FiltresPage()
         self._stack.addWidget(self.filtres_page)
-        # Index 2 : Runes (placeholder, Plan 3)
-        self._stack.addWidget(_placeholder("Runes - a implementer"))
+        # Index 2 : Runes
+        self.runes_page = RunesPage()
+        self._stack.addWidget(self.runes_page)
         # Index 3 : Monstres
         self.monsters_page = MonstersPage()
         self._stack.addWidget(self.monsters_page)
@@ -99,6 +101,10 @@ class MainWindow(QMainWindow):
             self.monsters_page.apply_profile,
             type=Qt.ConnectionType.QueuedConnection,
         )
+        self.controller.profile_loaded.connect(
+            self.runes_page.apply_profile,
+            type=Qt.ConnectionType.QueuedConnection,
+        )
         self.controller.state_changed.connect(
             self.scan_page.set_active,
             type=Qt.ConnectionType.QueuedConnection,
@@ -130,6 +136,7 @@ class MainWindow(QMainWindow):
         profile["source"] = "cache"
         self.profile_page.apply_profile(profile, self._last_profile_saved_at)
         self.monsters_page.apply_profile(profile, self._last_profile_saved_at)
+        self.runes_page.apply_profile(profile, self._last_profile_saved_at)
 
     def _restore_cached_profile(self) -> None:
         cached = load_profile_payload()
@@ -145,6 +152,7 @@ class MainWindow(QMainWindow):
         self._last_profile_saved_at = saved_at
         self.profile_page.apply_profile(profile, saved_at)
         self.monsters_page.apply_profile(profile, saved_at)
+        self.runes_page.apply_profile(profile, saved_at)
 
     def _on_profile_import(self, path: str) -> None:
         import datetime
@@ -174,6 +182,7 @@ class MainWindow(QMainWindow):
         self._last_profile_saved_at = mtime
         self.profile_page.apply_profile(profile, mtime)
         self.monsters_page.apply_profile(profile, mtime)
+        self.runes_page.apply_profile(profile, mtime)
 
     def _on_nav(self, key: str) -> None:
         index = {

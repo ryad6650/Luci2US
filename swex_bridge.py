@@ -75,6 +75,7 @@ def parse_rune(data: dict) -> Rune:
 
     swex_eff = rune.get("efficiency")
     swex_max = rune.get("max_efficiency")
+    rune_id = rune.get("rune_id")
 
     return Rune(
         set=set_name,
@@ -87,7 +88,39 @@ def parse_rune(data: dict) -> Rune:
         substats=substats,
         swex_efficiency=float(swex_eff) if swex_eff is not None else None,
         swex_max_efficiency=float(swex_max) if swex_max is not None else None,
+        rune_id=int(rune_id) if rune_id is not None else None,
     )
+
+
+# ---------------------------------------------------------------------------
+# SWEX config discovery
+# ---------------------------------------------------------------------------
+
+def _swex_config_candidates() -> list[Path]:
+    home = Path.home()
+    return [
+        Path(os.environ.get("APPDATA", home / "AppData" / "Roaming"))
+            / "Summoners War Exporter" / "storage" / "Config.json",
+        home / "Library" / "Application Support" / "Summoners War Exporter"
+            / "storage" / "Config.json",
+        home / ".config" / "Summoners War Exporter" / "storage" / "Config.json",
+    ]
+
+
+def detect_drops_dir() -> str:
+    """Return `<SWEX filesPath>/rune-bot-drops`, or empty string if not found."""
+    for candidate in _swex_config_candidates():
+        if not candidate.is_file():
+            continue
+        try:
+            with open(candidate, encoding="utf-8") as f:
+                data = json.load(f)
+            files_path = data.get("App", {}).get("filesPath")
+        except (OSError, json.JSONDecodeError):
+            continue
+        if files_path:
+            return str(Path(files_path) / "rune-bot-drops")
+    return ""
 
 
 # ---------------------------------------------------------------------------

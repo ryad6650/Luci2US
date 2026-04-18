@@ -50,6 +50,35 @@ def test_monsters_index_is_monsters_page(qapp):
     assert isinstance(mw._stack.currentWidget(), MonstersPage)
 
 
+def test_runes_index_is_runes_page(qapp):
+    from ui.runes.runes_page import RunesPage
+    mw = MainWindow()
+    mw._on_nav("runes")
+    assert isinstance(mw._stack.currentWidget(), RunesPage)
+
+
+def test_profile_loaded_signal_feeds_runes_page(qapp):
+    from models import Monster, Rune, SubStat
+    mw = MainWindow()
+    r = Rune(
+        set="Violent", slot=2, stars=6, grade="Heroique", level=12,
+        main_stat=SubStat(type="VIT", value=39),
+        prefix=None, substats=[], swex_efficiency=90.0,
+        swex_max_efficiency=100.0, rune_id=1,
+    )
+    profile = {
+        "wizard_name": "Test", "level": 40,
+        "runes": [r], "monsters": [
+            Monster(name="Lushen", element="Vent", stars=6, level=40,
+                    unit_master_id=1, equipped_runes=[r]),
+        ],
+        "source": "manual",
+    }
+    mw.runes_page.apply_profile(profile, 0.0)
+    assert mw.runes_page._table._table.rowCount() == 1
+    assert mw.runes_page._equipped_index.get(1) == "Lushen"
+
+
 def test_profile_loaded_signal_feeds_monsters_page(qapp):
     from models import Monster
     mw = MainWindow()

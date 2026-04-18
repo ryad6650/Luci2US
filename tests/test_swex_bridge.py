@@ -107,6 +107,15 @@ class TestParseRune:
         rune = parse_rune(payload)
         assert rune.set == "Violent"
 
+    def test_rune_id_extracted(self):
+        payload = {**SAMPLE_RUNE_PAYLOAD, "rune_id": 987654321}
+        rune = parse_rune(payload)
+        assert rune.rune_id == 987654321
+
+    def test_rune_id_missing_defaults_none(self):
+        rune = parse_rune(SAMPLE_RUNE_PAYLOAD)
+        assert rune.rune_id is None
+
 
 # ---------------------------------------------------------------------------
 # SWEXBridge integration tests

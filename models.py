@@ -28,6 +28,7 @@ class Rune:
     ancient: bool = False
     swex_efficiency: float | None = None
     swex_max_efficiency: float | None = None
+    rune_id: int | None = None
 
 
 @dataclass

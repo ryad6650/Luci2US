@@ -15,13 +15,14 @@ from profile_tab import ProfileTab
 from settings_tab import SettingsTab
 from history_tab import HistoryTab
 from stats_tab import StatsTab
+from swex_bridge import detect_drops_dir
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 DEFAULT_CONFIG: dict = {
     "db_path": "history.db",
     "lang": "FR",
     "swex": {
-        "drops_dir": os.path.join(os.path.expanduser("~"), "AppData", "Local", "Programs", "sw-exporter", "rune-bot-drops"),
+        "drops_dir": detect_drops_dir(),
         "poll_interval": 0.5,
     },
     "s2us": {
