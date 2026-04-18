@@ -22,7 +22,17 @@ class MonstersPage(QWidget):
         self._stack.addWidget(self._detail)
         lay.addWidget(self._stack)
 
+        self._list.monster_clicked.connect(self._on_monster_clicked)
+        self._detail.back_clicked.connect(self._on_back)
+
     def apply_profile(self, profile: dict, saved_at) -> None:
         monsters = profile.get("monsters", [])
         self._list.set_monsters(monsters)
+        self._stack.setCurrentIndex(0)
+
+    def _on_monster_clicked(self, monster) -> None:
+        self._detail.set_monster(monster)
+        self._stack.setCurrentIndex(1)
+
+    def _on_back(self) -> None:
         self._stack.setCurrentIndex(0)
