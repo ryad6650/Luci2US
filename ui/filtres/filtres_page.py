@@ -60,6 +60,7 @@ class FiltresPage(QWidget):
         self._list_panel.import_requested.connect(self._on_import)
         self._list_panel.export_requested.connect(self._on_export)
         self._list_panel.test_requested.connect(self._on_test)
+        self._editor.filter_saved.connect(self._on_editor_saved)
 
     def _load_filters_from_config(self) -> None:
         cfg = _read_config()
@@ -103,6 +104,24 @@ class FiltresPage(QWidget):
     def _on_filter_selected(self, idx: int) -> None:
         if 0 <= idx < len(self._filters):
             self._editor.load_filter(self._filters[idx])
+
+    def _on_editor_saved(self, new_filter: S2USFilter) -> None:
+        idx = self._list_panel.current_index()
+        if idx < 0 or idx >= len(self._filters):
+            return
+        self._filters[idx] = new_filter
+        self._list_panel.set_filters(self._filters)
+        self._list_panel.select_index(idx)
+        self._write_filters_to_config_path()
+
+    def _write_filters_to_config_path(self) -> None:
+        path = self._filter_file_path
+        if not path:
+            return
+        try:
+            save_s2us_file(path, self._filters, self._global_settings)
+        except OSError:
+            pass
 
     def _on_import(self) -> None:
         path, _ = QFileDialog.getOpenFileName(

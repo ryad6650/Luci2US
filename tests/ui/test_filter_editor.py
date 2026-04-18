@@ -218,3 +218,43 @@ def test_optional_count_radio_group(qapp):
     assert e._optional_group.checkedId() == 3
     e._optional_group.button(2).setChecked(True)
     assert e.current_filter().optional_count == 2
+
+
+def test_efficiency_slider_and_method_roundtrip(qapp):
+    e = FilterEditor()
+    f = _mk()
+    f.efficiency = 85.0
+    f.eff_method = "SWOP"
+    e.load_filter(f)
+    assert e._eff_slider.value() == 85
+    assert e._eff_method.currentText() in ("SWOP", "S2US")
+    e._eff_slider.setValue(70)
+    e._eff_method.setCurrentText("S2US")
+    g = e.current_filter()
+    assert g.efficiency == 70.0
+    assert g.eff_method == "S2US"
+
+
+def test_grind_gem_dropdowns_roundtrip(qapp):
+    e = FilterEditor()
+    f = _mk()
+    f.grind = 2
+    f.gem = 3
+    e.load_filter(f)
+    assert e._grind_combo.currentIndex() == 2
+    assert e._gem_combo.currentIndex() == 3
+    e._grind_combo.setCurrentIndex(1)
+    assert e.current_filter().grind == 1
+
+
+def test_save_button_emits_filter_saved(qapp):
+    from PySide6.QtWidgets import QPushButton
+    e = FilterEditor()
+    e.load_filter(_mk())
+    received: list = []
+    e.filter_saved.connect(received.append)
+    save_btn = next(b for b in e.findChildren(QPushButton) if "SAVE" in b.text().upper())
+    e._name_edit.setText("After Save")
+    save_btn.click()
+    assert len(received) == 1
+    assert received[0].name == "After Save"

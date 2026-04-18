@@ -11,9 +11,9 @@ from dataclasses import replace
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QButtonGroup, QCheckBox, QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QRadioButton, QScrollArea, QSizePolicy,
-    QSlider, QVBoxLayout, QWidget,
+    QButtonGroup, QCheckBox, QComboBox, QDoubleSpinBox, QFrame, QGridLayout,
+    QHBoxLayout, QLabel, QLineEdit, QPushButton, QRadioButton, QScrollArea,
+    QSizePolicy, QSlider, QVBoxLayout, QWidget,
 )
 
 from models import SETS_FR, SET_FR_TO_EN
@@ -53,6 +53,9 @@ class FilterEditor(QWidget):
         self._build_main_stats()
         self._build_innate()
         self._build_subs()
+        self._build_efficiency()
+        self._build_grind_gem()
+        self._build_save_button()
 
         self._inner_lay.addStretch()
 
@@ -162,6 +165,57 @@ class FilterEditor(QWidget):
             self._innate_checks[k] = cb
             grid.addWidget(cb, i // 4, i % 4)
         box.addLayout(grid)
+
+    def _build_efficiency(self) -> None:
+        _, box = self._framed_block("Efficacite")
+        row = QHBoxLayout()
+        self._eff_slider = QSlider(Qt.Orientation.Horizontal)
+        self._eff_slider.setRange(0, 100)
+        self._eff_value = QLabel("0")
+        self._eff_value.setStyleSheet(f"color:{theme.COLOR_TEXT_MAIN};")
+        self._eff_slider.valueChanged.connect(
+            lambda v: self._eff_value.setText(str(v))
+        )
+        self._eff_method = QComboBox()
+        self._eff_method.addItems(["S2US", "SWOP"])
+        row.addWidget(self._eff_slider, 1)
+        row.addWidget(self._eff_value)
+        row.addWidget(self._eff_method)
+        box.addLayout(row)
+
+    def _build_grind_gem(self) -> None:
+        _, box = self._framed_block("Simuler Meule / Gemme")
+        row = QHBoxLayout()
+        lbl_g = QLabel("Meule :")
+        lbl_g.setStyleSheet(f"color:{theme.COLOR_GOLD};")
+        self._grind_combo = QComboBox()
+        self._grind_combo.addItems(["Aucune", "Magique", "Rare", "Legendaire"])
+        lbl_m = QLabel("Gemme :")
+        lbl_m.setStyleSheet(f"color:{theme.COLOR_GOLD};")
+        self._gem_combo = QComboBox()
+        self._gem_combo.addItems(["Aucune", "Magique", "Rare", "Legendaire"])
+        row.addWidget(lbl_g)
+        row.addWidget(self._grind_combo)
+        row.addSpacing(16)
+        row.addWidget(lbl_m)
+        row.addWidget(self._gem_combo)
+        row.addStretch()
+        box.addLayout(row)
+
+    def _build_save_button(self) -> None:
+        self._save_btn = QPushButton("SAVE")
+        self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._save_btn.setStyleSheet(
+            f"QPushButton {{ background:{theme.COLOR_BRONZE};"
+            f" color:{theme.COLOR_BG_APP}; border:none; border-radius:4px;"
+            f" padding:10px; font-size:13px; font-weight:700; letter-spacing:0.6px; }}"
+            f"QPushButton:hover {{ background:{theme.COLOR_EMBER}; }}"
+        )
+        self._save_btn.clicked.connect(self._on_save)
+        self._inner_lay.addWidget(self._save_btn)
+
+    def _on_save(self) -> None:
+        self.filter_saved.emit(self.current_filter())
 
     def _build_subs(self) -> None:
         _, box = self._framed_block("Sous-proprietes")
@@ -282,6 +336,12 @@ class FilterEditor(QWidget):
         if btn is not None:
             btn.setChecked(True)
 
+        self._eff_slider.setValue(int(f.efficiency))
+        self._eff_value.setText(str(int(f.efficiency)))
+        self._eff_method.setCurrentText(f.eff_method or "S2US")
+        self._grind_combo.setCurrentIndex(int(f.grind or 0))
+        self._gem_combo.setCurrentIndex(int(f.gem or 0))
+
     def current_filter(self) -> S2USFilter:
         base = self._current or S2USFilter(name="", sub_requirements={}, min_values={})
         aid = self._ancient_group.checkedId()
@@ -314,6 +374,10 @@ class FilterEditor(QWidget):
             sub_requirements=sub_requirements,
             min_values=min_values,
             optional_count=optional_count,
+            efficiency=float(self._eff_slider.value()),
+            eff_method=self._eff_method.currentText(),
+            grind=int(self._grind_combo.currentIndex()),
+            gem=int(self._gem_combo.currentIndex()),
         )
 
 

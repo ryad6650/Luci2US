@@ -141,6 +141,26 @@ def test_page_export_writes_filters_to_chosen_path(qapp, tmp_path, monkeypatch):
     assert reloaded[0].name == "X"
 
 
+def test_page_propagates_editor_save_to_filter_list(qapp, tmp_path, monkeypatch):
+    from s2us_writer import save_s2us_file
+    from s2us_filter import S2USFilter, load_s2us_file
+    src = tmp_path / "s.s2us"
+    save_s2us_file(str(src), [S2USFilter(name="Orig",
+                                         sub_requirements={}, min_values={})], {})
+    cfg = tmp_path / "c.json"
+    cfg.write_text(json.dumps({"s2us": {"filter_file": str(src)}}), encoding="utf-8")
+    from ui.filtres import filtres_page
+    monkeypatch.setattr(filtres_page, "_CONFIG_PATH", str(cfg))
+
+    page = FiltresPage()
+    page._editor._name_edit.setText("Renamed")
+    page._editor.filter_saved.emit(page._editor.current_filter())
+
+    assert page._filters[0].name == "Renamed"
+    reloaded, _ = load_s2us_file(str(src))
+    assert reloaded[0].name == "Renamed"
+
+
 def test_page_test_opens_rune_tester_modal(qapp, tmp_path, monkeypatch):
     cfg = tmp_path / "c.json"
     cfg.write_text("{}", encoding="utf-8")
