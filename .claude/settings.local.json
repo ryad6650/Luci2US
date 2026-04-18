@@ -54,7 +54,24 @@
       "Bash(.venv/Scripts/python.exe -m pytest tests/ --deselect tests/test_swex_bridge.py::TestMappings::test_set_id_mapping -q)",
       "Bash(.venv/Scripts/python.exe -m pytest tests/ui/ -q --deselect tests/ui/test_rune_icon.py::test_set_logo_loads_pixmap --deselect tests/ui/test_theme.py::test_asset_paths_resolve)",
       "Bash(.venv/Scripts/python.exe -m pytest tests/ui/test_rune_table.py tests/ui/test_runes_page.py tests/ui/test_rune_filter_bar.py tests/ui/test_rune_detail_panel.py tests/ui/test_main_window_nav.py -x -q)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git push *)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ui/test_scan_page.py tests/ui/test_sidebar.py tests/ui/test_main_window_nav.py tests/ui/test_history_item.py -q)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ui/ -q)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ui/test_rune_icon.py::test_set_logo_loads_pixmap tests/ui/test_theme.py::test_asset_paths_resolve -q)",
+      "Bash(.venv/Scripts/python.exe scan_app.py)",
+      "Bash(tasklist)",
+      "Bash(tasklist /FI \"IMAGENAME eq python.exe\")",
+      "Bash(cmd //c tasklist)",
+      "Bash(powershell.exe -Command \"Get-Process python* | Select-Object Id,ProcessName\")",
+      "Bash(.venv/Scripts/python.exe -c ' *)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ui/test_scan_page.py -q)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ui/test_monster_list.py tests/ui/test_monsters_page.py tests/ui/test_monster_detail.py tests/ui/test_main_window_nav.py -x --tb=short)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ui/ --tb=short)",
+      "Bash(.venv/Scripts/python.exe -c \"from ui.monsters.monsters_page import MonstersPage; from ui.monsters.monster_detail_modal import MonsterDetailModal; print\\('imports ok'\\)\")",
+      "Bash(xargs grep *)",
+      "Bash(taskkill //F //IM python.exe //FI \"WINDOWTITLE eq Luci2US*\")",
+      "Bash(taskkill //F //IM pythonw.exe //FI \"WINDOWTITLE eq Luci2US*\")"
     ]
   }
 }
