@@ -120,16 +120,18 @@ class RuneTesterModal(QDialog):
 
         root.addLayout(self._form_row("Classe :", self._class_combo))
         root.addLayout(self._form_row("Taper :", self._set_combo))
-        lvl_row = self._form_row("Niveau :", self._level_spin)
-        lvl_row.addWidget(self._level_hint)
+        lvl_row = self._form_row("Niveau :", self._level_spin, stretch=False)
         lvl_row.addStretch()
+        lvl_row.addWidget(self._level_hint)
         root.addLayout(lvl_row)
         root.addLayout(self._form_row("Rarete :", self._grade_combo))
         root.addLayout(self._form_row("Etoiles :", self._stars_spin))
         root.addLayout(self._form_row("Slot :", self._slot_spin))
         root.addLayout(self._form_row("Propriete principale :", self._main_combo))
 
-        innate_row = self._form_row("Propriete innate :", self._innate_type_combo)
+        innate_row = self._form_row(
+            "Propriete innate :", self._innate_type_combo, stretch=False,
+        )
         innate_row.addWidget(self._innate_val_spin)
         innate_row.addStretch()
         root.addLayout(innate_row)
@@ -273,7 +275,11 @@ class RuneTesterModal(QDialog):
         self._refresh_live_eff()
 
     @staticmethod
-    def _form_row(label_text: str, widget: QWidget | None) -> QHBoxLayout:
+    def _form_row(
+        label_text: str,
+        widget: QWidget | None,
+        stretch: bool = True,
+    ) -> QHBoxLayout:
         row = QHBoxLayout()
         row.setSpacing(6)
         lbl = QLabel(label_text)
@@ -282,7 +288,8 @@ class RuneTesterModal(QDialog):
         row.addWidget(lbl)
         if widget is not None:
             row.addWidget(widget)
-            row.addStretch()
+            if stretch:
+                row.addStretch()
         return row
 
     def _on_slot_changed(self, slot: int) -> None:
