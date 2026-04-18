@@ -11,6 +11,7 @@ from profile_loader import load_profile_from_dict
 from profile_store import load_profile_payload
 from ui import theme
 from ui.controllers.scan_controller import ScanController
+from ui.filtres.filtres_page import FiltresPage
 from ui.profile.profile_page import ProfilePage
 from ui.settings.settings_page import SettingsPage
 from ui.sidebar import Sidebar
@@ -56,8 +57,9 @@ class MainWindow(QMainWindow):
 
         # Index 0 : Scan
         self._stack.addWidget(self.scan_page)
-        # Index 1 : Filtres (placeholder, Plan 5)
-        self._stack.addWidget(_placeholder("Filtres - a implementer"))
+        # Index 1 : Filtres
+        self.filtres_page = FiltresPage()
+        self._stack.addWidget(self.filtres_page)
         # Index 2 : Runes (placeholder, Plan 3)
         self._stack.addWidget(_placeholder("Runes - a implementer"))
         # Index 3 : Monstres (placeholder, Plan 2)

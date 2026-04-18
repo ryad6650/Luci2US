@@ -34,3 +34,10 @@ def test_settings_index_is_settings_page(qapp):
     mw._on_nav("settings")
     current = mw._stack.currentWidget()
     assert isinstance(current, SettingsPage)
+
+
+def test_filters_index_is_filtres_page(qapp):
+    from ui.filtres.filtres_page import FiltresPage
+    mw = MainWindow()
+    mw._on_nav("filters")
+    assert isinstance(mw._stack.currentWidget(), FiltresPage)
