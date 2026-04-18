@@ -1,0 +1,128 @@
+<h2>Onglet Filtres — révision avec éditeur L2</h2>
+<p class="subtitle">L'éditeur S2US prend beaucoup de place. Deux façons de cohabiter avec le testeur + calculateur meule/gemme.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="sub-modes" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#120a05;padding:10px">
+      <div style="min-height:320px">
+        <div style="display:flex;gap:2px;border-bottom:1px solid #5a3d1f;margin-bottom:8px">
+          <div style="padding:6px 14px;color:#e8c96a;font-size:10px;font-weight:700;border-bottom:2px solid #c67032">▸ Gérer les filtres</div>
+          <div style="padding:6px 14px;color:#9ca3af;font-size:10px">Testeur + Meule/Gemme</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <div style="flex:0 0 28%;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;padding:6px">
+            <button style="background:#5a2e14;color:#e8c96a;font-size:9px;padding:4px 8px;border:none;border-radius:3px;width:100%;margin-bottom:3px">+ Importer .s2us</button>
+            <button style="background:transparent;color:#9cc848;font-size:9px;padding:4px 8px;border:1px solid #9cc848;border-radius:3px;width:100%;margin-bottom:6px">+ Nouveau filtre</button>
+            <div style="background:rgba(232,201,106,0.08);border-left:3px solid #c67032;padding:4px 5px;color:#f0e6d0;font-size:9px;margin-bottom:2px">ATK, HP, DEF...</div>
+            <div style="padding:4px 5px;color:#ddd0b8;font-size:9px">Keep DD</div>
+            <div style="padding:4px 5px;color:#ddd0b8;font-size:9px">Keep Support</div>
+            <div style="padding:4px 5px;color:#ddd0b8;font-size:9px">Sell Trash</div>
+          </div>
+          <div style="flex:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;padding:6px;font-size:8px">
+            <div style="display:flex;gap:4px;align-items:center;margin-bottom:5px">
+              <div style="background:#5a2e14;width:22px;height:10px;border-radius:5px"></div>
+              <div style="color:#e8c96a;font-size:10px;font-weight:700;font-family:Georgia,serif">ATK, HP, DEF (SPDx2 + CR | CD)</div>
+            </div>
+            <div style="background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:4px;margin-bottom:3px">
+              <div style="color:#e8c96a;font-size:8px">SETS</div>
+              <div style="color:#ddd0b8;font-size:8px;line-height:1.4">☑ Despair ☑ Energy ☑ Fatal ☑ Blade ☑ Swift ☐ Intangible<br>☑ Violent ☐ Focus ☑ Guard ☐ Endure ☑ Shield ☑ Revenge</div>
+            </div>
+            <div style="display:flex;gap:3px;margin-bottom:3px">
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">RARETÉ</div><div style="color:#ddd0b8;font-size:8px">Rare Hero Leg</div></div>
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">SLOT</div><div style="color:#ddd0b8;font-size:8px">1 2 3 4 5 6</div></div>
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">★</div><div style="color:#ddd0b8;font-size:8px">5 6</div></div>
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">CLASSE</div><div style="color:#ddd0b8;font-size:8px">N A</div></div>
+            </div>
+            <div style="display:flex;gap:3px;margin-bottom:3px">
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">MAIN</div><div style="color:#ddd0b8;font-size:8px">PV% ATQ% DEF%</div></div>
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">INNATE</div><div style="color:#ddd0b8;font-size:8px">PV% ATQ% DEF%</div></div>
+            </div>
+            <div style="background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px;margin-bottom:3px">
+              <div style="color:#e8c96a;font-size:8px">SOUS-PROPRIÉTÉS (Obligatoire / Optionnel)</div>
+              <div style="color:#ddd0b8;font-size:8px;line-height:1.4">☑ VIT ≥16 ━━●━  ☐ PV% ≥17 ──●──  ☐ PV ≥135 ──●──<br>☐ ATQ% ≥17 ──●──  ☐ ATQ ≥10 ──●──  ─ TC% ≥8 ──●──<br>Facultatifs requis : ●1 ○2 ○3 ○4</div>
+            </div>
+            <div style="display:flex;gap:3px">
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">EFFI</div><div style="color:#ddd0b8;font-size:8px">99% · S2US</div></div>
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">MEULE/GEMME</div><div style="color:#ddd0b8;font-size:8px">Rare G · Hero Gem</div></div>
+              <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:3px;padding:3px"><div style="color:#e8c96a;font-size:8px">MARQUE</div><div style="color:#ddd0b8;font-size:8px">-</div></div>
+            </div>
+            <div style="margin-top:4px;background:#5a2e14;color:#e8c96a;font-size:9px;padding:4px;border-radius:3px;text-align:center;font-weight:700">SAVE</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="letter" style="position:absolute;top:8px;right:8px">F3</div>
+      <h3>2 sous-modes (éditeur / testeur)</h3>
+      <p>Sous-onglet <b>Gérer</b> : liste + éditeur S2US pleine largeur (23 sets, tous les sliders, save). Sous-onglet <b>Testeur</b> : coller une rune → verdict + meule/gemme à +12. Chaque mode a la place qu'il lui faut.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="drawer" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#120a05;padding:10px">
+      <div style="min-height:320px;position:relative">
+        <div style="display:flex;gap:6px;height:100%">
+          <div style="flex:0 0 30%;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;padding:6px">
+            <div style="color:#e8c96a;font-size:9px;font-weight:700;letter-spacing:1px;margin-bottom:3px">FILTRES</div>
+            <button style="background:#5a2e14;color:#e8c96a;font-size:9px;padding:4px;border:none;border-radius:3px;width:100%;margin-bottom:3px">+ Importer</button>
+            <button style="background:transparent;color:#9cc848;font-size:9px;padding:4px;border:1px solid #9cc848;border-radius:3px;width:100%;margin-bottom:5px">+ Nouveau</button>
+            <div style="background:rgba(232,201,106,0.08);border-left:3px solid #c67032;padding:3px 5px;color:#f0e6d0;font-size:9px;margin-bottom:2px;display:flex;justify-content:space-between">ATK HP DEF...<span style="color:#e8c96a">✎</span></div>
+            <div style="padding:3px 5px;color:#ddd0b8;font-size:9px;display:flex;justify-content:space-between">Keep DD<span style="color:#9ca3af">✎</span></div>
+            <div style="padding:3px 5px;color:#ddd0b8;font-size:9px;display:flex;justify-content:space-between">Keep Support<span style="color:#9ca3af">✎</span></div>
+            <div style="padding:3px 5px;color:#ddd0b8;font-size:9px;display:flex;justify-content:space-between">Sell Trash<span style="color:#9ca3af">✎</span></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <div style="background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;padding:8px">
+              <div style="color:#e8c96a;font-size:9px;font-weight:700;letter-spacing:1px">TESTER UNE RUNE</div>
+              <div style="display:grid;grid-template-columns:auto 1fr auto 1fr;gap:3px 6px;color:#ddd0b8;font-size:9px;margin-top:4px">
+                <div style="color:#9ca3af">Set:</div><div>Violent ▾</div>
+                <div style="color:#9ca3af">Slot:</div><div>2 ▾</div>
+                <div style="color:#9ca3af">Main:</div><div>ATQ% ▾</div>
+                <div style="color:#9ca3af">★:</div><div>6</div>
+                <div style="color:#9ca3af">Subs:</div><div colspan="3" style="grid-column:span 3">VIT+12, PV%+9, CC+6</div>
+              </div>
+              <div style="background:#5a2e14;color:#e8c96a;font-size:9px;padding:4px;border-radius:3px;text-align:center;margin-top:4px">Tester</div>
+            </div>
+            <div style="background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;padding:8px;flex:1">
+              <div style="display:flex;gap:6px">
+                <div style="flex:1">
+                  <div style="color:#8ec44a;font-size:11px;font-weight:700">✓ KEEP</div>
+                  <div style="color:#ddd0b8;font-size:9px;margin-top:2px">Filtre matché : <b>ATK HP DEF...</b></div>
+                  <div style="color:#9ca3af;font-size:9px">Score 88 · Efficience 128%</div>
+                </div>
+                <div style="flex:1;padding-left:8px;border-left:1px solid #3d2818">
+                  <div style="color:#f5a030;font-size:10px;font-weight:700">À +12 — max Eff</div>
+                  <div style="color:#ddd0b8;font-size:9px;margin-top:2px">Meule : <b>VIT Lég</b> (+5 → +10)</div>
+                  <div style="color:#ddd0b8;font-size:9px">Gemme : <b>PV% → DC</b> (+11%)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;top:4px;right:4px;bottom:4px;width:48%;background:#120a05;border:2px solid #c67032;border-radius:4px;padding:6px;box-shadow:-8px 0 20px rgba(0,0,0,0.7);overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <div style="color:#e8b040;font-size:10px;font-weight:700;font-family:Georgia,serif">Édition : ATK HP DEF...</div>
+            <div style="color:#9ca3af;font-size:12px">✕</div>
+          </div>
+          <div style="color:#9ca3af;font-size:8px;font-style:italic">drawer coulissant contenant l'éditeur S2US complet (23 sets, sliders, save...)</div>
+          <div style="margin-top:6px;background:#0a0604;border:1px solid #3d2818;padding:4px;font-size:8px;color:#ddd0b8">☑ Despair  ☑ Energy ☑ Fatal ☑ Blade ...</div>
+          <div style="margin-top:3px;background:#0a0604;border:1px solid #3d2818;padding:4px;font-size:8px;color:#ddd0b8">Rareté · Slot · ★ · Classe · Main · Innate...</div>
+          <div style="margin-top:3px;background:#0a0604;border:1px solid #3d2818;padding:4px;font-size:8px;color:#ddd0b8">Sous-propriétés avec sliders obligatoire/optionnel...</div>
+          <div style="margin-top:3px;background:#0a0604;border:1px solid #3d2818;padding:4px;font-size:8px;color:#ddd0b8">Efficacité · Meule · Gemme · Marque</div>
+          <div style="margin-top:6px;background:#5a2e14;color:#e8c96a;font-size:9px;padding:4px;border-radius:3px;text-align:center">SAVE</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="letter" style="position:absolute;top:8px;right:8px">F4</div>
+      <h3>Testeur toujours visible · Éditeur en drawer</h3>
+      <p>Une page : liste + testeur + meule/gemme <b>toujours visibles</b>. Clic sur ✎ d'un filtre → drawer coulissant à droite contient l'éditeur complet (50% largeur), Save ferme. On garde le flux testeur intact.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:16px">
+  <p class="subtitle"><strong>Ma reco : F4 (drawer).</strong> Ça garde le flux testeur+meule/gemme en permanence (ton besoin principal de l'onglet), et l'éditeur 500×800 a sa propre surface quand tu en as besoin. F3 est plus « propre » mais force à switcher entre deux modes qui ont peu de rapport l'un avec l'autre. Le drawer est un pattern Qt standard (QDockWidget / QDrawer custom).</p>
+</div>

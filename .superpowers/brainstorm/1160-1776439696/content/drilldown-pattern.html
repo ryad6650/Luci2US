@@ -1,0 +1,124 @@
+<h2>Modèle de drill-down pour Monstres / Runes</h2>
+<p class="subtitle">Comment afficher le détail d'un monstre (ou d'une rune) quand on clique dessus ? Le même pattern s'appliquera aux deux onglets pour la cohérence.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="split" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#120a05;padding:12px">
+      <div style="display:flex;gap:8px;height:100%;min-height:220px">
+        <div style="flex:0 0 38%;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:6px">
+          <div style="color:#e8c96a;font-size:11px;font-weight:700;letter-spacing:1px">LISTE MONSTRES</div>
+          <div style="background:rgba(232,201,106,0.06);border-left:3px solid #c67032;padding:6px 8px;color:#f0e6d0;font-size:10px">Lushen ★6 L40</div>
+          <div style="padding:6px 8px;color:#ddd0b8;font-size:10px">Laika ★6 L40</div>
+          <div style="padding:6px 8px;color:#ddd0b8;font-size:10px">Bella ★6 L40</div>
+          <div style="padding:6px 8px;color:#ddd0b8;font-size:10px">Rica ★6 L40</div>
+          <div style="padding:6px 8px;color:#ddd0b8;font-size:10px">Khmun ★6 L40</div>
+          <div style="padding:6px 8px;color:#9ca3af;font-size:9px;margin-top:auto">+243 monstres</div>
+        </div>
+        <div style="flex:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:6px">
+          <div style="color:#e8b040;font-size:13px;font-weight:700;font-family:Georgia,serif">Lushen</div>
+          <div style="color:#9cc848;font-size:10px">Vent · ★6 · L40</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px">
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:4px;text-align:center;color:#f0e6d0;font-size:9px">Slot 1<br>ATQ+22%</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:4px;text-align:center;color:#f0e6d0;font-size:9px">Slot 2<br>ATQ+22%</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:4px;text-align:center;color:#f0e6d0;font-size:9px">Slot 3<br>DEF+8%</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:4px;text-align:center;color:#f0e6d0;font-size:9px">Slot 4<br>DC+64%</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:4px;text-align:center;color:#f0e6d0;font-size:9px">Slot 5<br>PV+2448</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:4px;text-align:center;color:#f0e6d0;font-size:9px">Slot 6<br>ATQ+51%</div>
+          </div>
+          <div style="margin-top:6px;color:#ddd0b8;font-size:10px">PV 12 450 · ATQ 2 248 · VIT 183 · CC 78%</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="letter" style="position:absolute;top:8px;right:8px">A</div>
+      <h3>Split view maître-détail</h3>
+      <p>Liste à gauche toujours visible, détail du monstre sélectionné à droite. Navigation rapide entre monstres. Dense, efficace, style inspecteur.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="grid-modal" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#120a05;padding:12px">
+      <div style="position:relative;height:100%;min-height:220px">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:6px">
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#e8c96a;font-size:9px">Lus</div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#ddd0b8;font-size:9px">Lai</div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#ddd0b8;font-size:9px">Bel</div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#ddd0b8;font-size:9px">Ric</div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#ddd0b8;font-size:9px">Khm</div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#ddd0b8;font-size:9px">Dom</div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px"></div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px"></div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px"></div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px"></div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px"></div>
+          <div style="aspect-ratio:1;background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px"></div>
+        </div>
+        <div style="position:absolute;top:20px;left:10%;right:10%;background:#120a05;border:2px solid #c67032;border-radius:6px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.6)">
+          <div style="color:#e8b040;font-size:13px;font-weight:700;font-family:Georgia,serif">Lushen</div>
+          <div style="color:#9cc848;font-size:10px">Vent · ★6 · L40</div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:6px">
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:3px;text-align:center;color:#f0e6d0;font-size:8px">R1</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:3px;text-align:center;color:#f0e6d0;font-size:8px">R2</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:3px;text-align:center;color:#f0e6d0;font-size:8px">R3</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:3px;text-align:center;color:#f0e6d0;font-size:8px">R4</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:3px;text-align:center;color:#f0e6d0;font-size:8px">R5</div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:3px;padding:3px;text-align:center;color:#f0e6d0;font-size:8px">R6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="letter" style="position:absolute;top:8px;right:8px">B</div>
+      <h3>Grille + overlay modal</h3>
+      <p>Grille compacte de vignettes (style SW in-game), clic = overlay centré sur la page avec le détail. Très visuel, familier aux joueurs, moins dense en info par écran.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="push-page" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#120a05;padding:12px">
+      <div style="height:100%;min-height:220px">
+        <div style="color:#9ca3af;font-size:9px;margin-bottom:6px">&lt; Retour · Monstres / Lushen</div>
+        <div style="background:#1a0f07;border:1px solid #5a3d1f;border-radius:4px;padding:12px">
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="width:48px;height:48px;background:#5a2e14;border-radius:50%"></div>
+            <div>
+              <div style="color:#e8b040;font-size:14px;font-weight:700;font-family:Georgia,serif">Lushen</div>
+              <div style="color:#9cc848;font-size:10px">Vent · ★6 · Niv 40</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px">
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:4px;padding:8px;text-align:center">
+              <div style="color:#e8c96a;font-size:9px">SLOT 1 · Fatal</div>
+              <div style="color:#f0e6d0;font-size:10px">ATQ+22%</div>
+              <div style="color:#ddd0b8;font-size:8px">CC+6 · DC+5</div>
+            </div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:4px;padding:8px;text-align:center">
+              <div style="color:#e8c96a;font-size:9px">SLOT 2 · Fatal</div>
+              <div style="color:#f0e6d0;font-size:10px">ATQ+22%</div>
+              <div style="color:#ddd0b8;font-size:8px">VIT+6 · PV+375</div>
+            </div>
+            <div style="background:#0a0604;border:1px solid #5a3d1f;border-radius:4px;padding:8px;text-align:center">
+              <div style="color:#e8c96a;font-size:9px">SLOT 3 · Fatal</div>
+              <div style="color:#f0e6d0;font-size:10px">DEF+8%</div>
+              <div style="color:#ddd0b8;font-size:8px">ATQ+8%</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #3d2818;color:#ddd0b8;font-size:10px">
+            PV 12 450 · ATQ 2 248 · VIT 183 · CC 78% · DC 164%
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="letter" style="position:absolute;top:8px;right:8px">C</div>
+      <h3>Push page (plein écran)</h3>
+      <p>Clic sur un monstre → la page se remplace par le détail plein écran (breadcrumb « &lt; Retour »). Maximum d'espace pour le détail, mais perd la liste de contexte.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:16px">
+  <p class="subtitle"><strong>Ma reco : A (split view maître-détail).</strong> Raisons : (1) cohérent avec le style dense/inspecteur de la Scan page v13, (2) permet de zapper rapidement entre monstres sans perdre le contexte, (3) se porte tel quel à l'onglet Runes (liste filtrable + détail). B perd beaucoup d'espace pour un effet « wow ». C rompt la continuité de la liste.</p>
+</div>

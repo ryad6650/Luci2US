@@ -1,0 +1,238 @@
+<h2>Onglet Filtres — layout final (style Luci2US)</h2>
+<p class="subtitle">Reprise de ton UI S2US adaptée au thème bronze/or. Liste + priorité + power-up global à gauche, éditeur à droite, testeur en modale via le bouton Test.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Onglet Filtres · vue principale</div>
+  <div class="mockup-body" style="padding:0">
+    <div style="display:flex;gap:6px;padding:8px;background:#0a0604;min-height:520px;font-family:Segoe UI,sans-serif">
+
+      <!-- LEFT PANEL -->
+      <div style="flex:0 0 230px;background:#120a05;border:1px solid #5a3d1f;border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px">
+        <div style="color:#e8b040;font-size:13px;font-weight:700;font-family:Georgia,serif;text-align:center">Filtres S2US</div>
+
+        <!-- Priority buttons -->
+        <div style="display:flex;justify-content:center;gap:6px">
+          <div title="Ajouter" style="width:30px;height:30px;border-radius:50%;background:qlineargradient(180deg,#c67032,#8b4a1f);background:#c67032;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer">＋</div>
+          <div title="Supprimer" style="width:30px;height:30px;border-radius:50%;background:#5a2e14;color:#f0e6d0;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer">−</div>
+          <div title="Monter" style="width:30px;height:30px;border-radius:50%;background:#5a2e14;color:#e8c96a;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">▲</div>
+          <div title="Descendre" style="width:30px;height:30px;border-radius:50%;background:#5a2e14;color:#e8c96a;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer">▼</div>
+        </div>
+
+        <!-- Import/Export/Test -->
+        <div style="display:flex;gap:4px">
+          <button style="flex:1;background:#c67032;color:#0a0604;border:none;border-radius:3px;padding:5px;font-size:10px;font-weight:600">Importer</button>
+          <button style="flex:1;background:#5a2e14;color:#e8c96a;border:1px solid #8b4a1f;border-radius:3px;padding:5px;font-size:10px">Exporter</button>
+          <button style="flex:1;background:transparent;color:#9cc848;border:1px solid #9cc848;border-radius:3px;padding:5px;font-size:10px;font-weight:600">Test</button>
+        </div>
+
+        <!-- Filter list -->
+        <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:4px;overflow:auto;max-height:200px">
+          <div style="color:#c67032;font-size:10px;font-weight:700;padding:3px 4px">▼ [S2US][Early-game]</div>
+          <div style="color:#c67032;font-size:10px;font-weight:700;padding:3px 4px">▼ [S2US][Mid-game 1]</div>
+          <div style="color:#c67032;font-size:10px;font-weight:700;padding:3px 4px">▼ SLOT 4/6 FILTERS (PREMIUM)</div>
+          <div style="color:#ddd0b8;font-size:10px;padding:2px 12px">ACC, RES (SPDx2 + HP | DEF | ATK)</div>
+          <div style="color:#ddd0b8;font-size:10px;padding:2px 12px">ACC, RES (SPDx3)</div>
+          <div style="color:#ddd0b8;font-size:10px;padding:2px 12px">Flat (SPDx4)</div>
+          <div style="color:#c67032;font-size:10px;font-weight:700;padding:3px 4px">▼ SLOT 2 FILTERS (NORMAL)</div>
+          <div style="color:#ddd0b8;font-size:10px;padding:2px 12px">SPD (HP + ATK + DEF)</div>
+          <div style="color:#ddd0b8;font-size:10px;padding:2px 12px">SPD (CDx2 + CR + ACC)</div>
+          <div style="color:#ddd0b8;font-size:10px;padding:2px 12px">SPD (ACC + RES + HP | DEF | ATK)</div>
+          <div style="background:rgba(232,201,106,0.12);border-left:3px solid #c67032;color:#f0e6d0;font-size:10px;padding:2px 12px;font-weight:600">SPD (CR + CD + ACC) ✎</div>
+          <div style="color:#ddd0b8;font-size:10px;padding:2px 12px">SPD (CDx2 + HP | DEF | ATK)</div>
+        </div>
+
+        <!-- Powerup global settings -->
+        <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px;display:flex;flex-direction:column;gap:6px">
+          <div style="color:#e8c96a;font-size:10px;font-weight:700;letter-spacing:0.5px">RÈGLES DE POWER-UP</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:4px;color:#ddd0b8;font-size:10px"><input type="checkbox" checked style="accent-color:#c67032">Améliorer de +3 à +3</div>
+            <div style="color:#9ca3af;font-size:9px;padding-left:16px">Do not power-up Rare · slider</div>
+          </div>
+          <div>
+            <div style="color:#ddd0b8;font-size:10px">Améliorer Hero à +12</div>
+            <div style="margin-left:4px;color:#9ca3af;font-size:9px">━━●━━━━━</div>
+          </div>
+          <div>
+            <div style="color:#ddd0b8;font-size:10px">Améliorer Legend à +12</div>
+            <div style="margin-left:4px;color:#9ca3af;font-size:9px">━━━━●━━━</div>
+          </div>
+          <div style="border-top:1px solid #3d2818;padding-top:4px;display:flex;flex-direction:column;gap:3px">
+            <div style="display:flex;align-items:center;gap:4px;color:#ddd0b8;font-size:10px"><input type="checkbox" style="accent-color:#c67032">Use Grindstone (amplify)</div>
+            <div style="display:flex;align-items:center;gap:4px;color:#ddd0b8;font-size:10px"><input type="checkbox" style="accent-color:#c67032">Use Enchanted Gem (convert)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL : EDITOR -->
+      <div style="flex:1;background:#120a05;border:1px solid #5a3d1f;border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:10px">
+
+        <!-- Header : enable toggle + name -->
+        <div style="display:flex;align-items:center;gap:8px;background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px">
+          <div style="width:34px;height:16px;background:#c67032;border-radius:8px;position:relative"><div style="position:absolute;right:2px;top:2px;width:12px;height:12px;background:#f0e6d0;border-radius:50%"></div></div>
+          <div style="color:#9ca3af;font-size:10px">Nom</div>
+          <input style="flex:1;background:#0a0604;border:1px solid #5a3d1f;color:#f0e6d0;padding:3px 6px;border-radius:3px;font-size:11px" value="SPD (CR + CD + ACC)">
+        </div>
+
+        <!-- Taper (sets) -->
+        <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <div style="color:#e8c96a;font-size:10px;font-weight:700;letter-spacing:0.5px">TAPER</div>
+            <button style="background:#5a2e14;color:#e8c96a;border:1px solid #8b4a1f;border-radius:3px;padding:2px 8px;font-size:9px">Cocher/décocher</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px 6px;color:#ddd0b8">
+            <label><input type="checkbox" style="accent-color:#c67032"> Despair</label>
+            <label><input type="checkbox" checked style="accent-color:#c67032"> Energy</label>
+            <label><input type="checkbox" checked style="accent-color:#c67032"> Fatal</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Blade</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Swift</label>
+            <label><input type="checkbox" checked style="accent-color:#c67032"> Intangible</label>
+            <label><input type="checkbox" checked style="accent-color:#c67032"> Violent</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Focus</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Guard</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Endure</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Shield</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Revenge</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Rage</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Will</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Nemesis</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Vampire</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Destroy</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Seal</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Fight</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Enhance</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Accuracy</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Tolerance</label>
+            <label><input type="checkbox" style="accent-color:#c67032"> Determination</label>
+          </div>
+        </div>
+
+        <!-- Niveau / Rareté / Slot / Niveau★ / Classe -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:4px">
+          <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:5px">
+            <div style="color:#e8c96a;font-size:9px;font-weight:700">NIVEAU</div>
+            <div style="color:#9ca3af;font-size:9px;margin-top:2px">━━●━━━━━</div>
+            <div style="color:#9cc848;font-size:9px;font-style:italic;margin-top:2px">Smart Filter</div>
+          </div>
+          <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:5px;color:#ddd0b8;font-size:9px">
+            <div style="color:#e8c96a;font-weight:700">RARETÉ</div>
+            <div><input type="checkbox" checked style="accent-color:#c67032"> Rare</div>
+            <div><input type="checkbox" checked style="accent-color:#c67032"> Hero</div>
+            <div><input type="checkbox" checked style="accent-color:#c67032"> Legend</div>
+          </div>
+          <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:5px;color:#ddd0b8;font-size:9px">
+            <div style="color:#e8c96a;font-weight:700">SLOT</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+              <div><input type="checkbox" style="accent-color:#c67032"> 1</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> 4</div>
+              <div><input type="checkbox" checked style="accent-color:#c67032"> 2</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> 5</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> 3</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> 6</div>
+            </div>
+          </div>
+          <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:5px;color:#ddd0b8;font-size:9px">
+            <div style="color:#e8c96a;font-weight:700">NIVEAU</div>
+            <div><input type="checkbox" style="accent-color:#c67032"> 5★</div>
+            <div><input type="checkbox" checked style="accent-color:#c67032"> 6★</div>
+          </div>
+          <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:5px;color:#ddd0b8;font-size:9px">
+            <div style="color:#e8c96a;font-weight:700">CLASSE</div>
+            <div><input type="checkbox" checked style="accent-color:#c67032"> Normal</div>
+            <div><input type="checkbox" checked style="accent-color:#c67032"> Ancient</div>
+          </div>
+        </div>
+
+        <!-- Main stat + Innate -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px">
+            <div style="color:#e8c96a;font-size:9px;font-weight:700">PROPRIÉTÉ PRINCIPALE</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;color:#ddd0b8;font-size:9px;margin-top:3px">
+              <div><input type="checkbox" checked style="accent-color:#c67032"> VIT</div>
+              <div style="color:#6b5a3a"><input type="checkbox" disabled> TC%</div>
+              <div style="color:#6b5a3a"><input type="checkbox" disabled> DC%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> PV%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> PV</div>
+              <div style="color:#6b5a3a"><input type="checkbox" disabled> PRÉ%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> ATQ%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> ATQ</div>
+              <div style="color:#6b5a3a"><input type="checkbox" disabled> RES%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> DEF%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> DEF</div>
+              <div></div>
+            </div>
+          </div>
+          <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px">
+            <div style="color:#e8c96a;font-size:9px;font-weight:700">PROPRIÉTÉ INNATE</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;color:#ddd0b8;font-size:9px;margin-top:3px">
+              <div><input type="checkbox" style="accent-color:#c67032"> VIT</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> TC%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> DC%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> PV%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> PV</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> PRÉ%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> ATQ%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> ATQ</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> RES%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> DEF%</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> DEF</div>
+              <div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subs + Efficacité + Simuler -->
+        <div style="display:flex;gap:4px">
+          <div style="flex:1;background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px">
+            <div style="color:#e8c96a;font-size:9px;font-weight:700">SOUS-PROPRIÉTÉ (<span style="color:#9cc848">☑ Obligatoire</span> <span style="color:#c67032">☐ Optionnel</span>)</div>
+            <div style="margin-top:4px;color:#ddd0b8;font-size:9px;display:grid;grid-template-columns:auto 40px 1fr auto;gap:2px 6px;align-items:center">
+              <div><input type="checkbox" style="accent-color:#c67032"> VIT</div><div>≥ 3</div><div style="color:#9ca3af">━━●━━━━</div><div style="color:#9ca3af;font-size:8px;grid-row:span 4;padding-left:8px;border-left:1px solid #3d2818">Combien de<br>sous-propriétés<br>facultatives<br>doit-il y avoir ?<br><br><input type="radio" name="opt"> 1<br><input type="radio" name="opt"> 2<br><input type="radio" name="opt"> 3<br><input type="radio" name="opt"> 4</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> PV%</div><div>≥ 17</div><div style="color:#9ca3af">━━━●━━━</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> PV</div><div>≥ 135</div><div style="color:#9ca3af">━━━━●━━</div>
+              <div><input type="checkbox" style="accent-color:#c67032"> ATQ%</div><div>≥ 17</div><div style="color:#9ca3af">━━━●━━━</div>
+              <div><input type="checkbox" checked style="accent-color:#9cc848"> TC%</div><div>≥ 8</div><div style="color:#9ca3af">━━●━━━━</div>
+              <div></div>
+              <div><input type="checkbox" checked style="accent-color:#9cc848"> DC%</div><div>≥ 9</div><div style="color:#9ca3af">━━●━━━━</div>
+              <div></div>
+              <div><input type="checkbox" checked style="accent-color:#9cc848"> PRÉ%</div><div>≥ 11</div><div style="color:#9ca3af">━━━●━━━</div>
+              <div></div>
+              <div><input type="checkbox" style="accent-color:#c67032"> RES%</div><div>≥ 11</div><div style="color:#9ca3af">━━━●━━━</div>
+              <div></div>
+            </div>
+          </div>
+          <div style="flex:0 0 150px;display:flex;flex-direction:column;gap:4px">
+            <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px">
+              <div style="color:#e8c96a;font-size:9px;font-weight:700">EFFICACITÉ</div>
+              <div style="color:#9ca3af;font-size:9px;margin-top:3px">━━━━●━━━</div>
+              <div style="color:#f0e6d0;font-size:11px;text-align:center;font-weight:600">86%</div>
+              <div style="color:#9ca3af;font-size:9px;margin-top:4px">Méthode</div>
+              <select style="width:100%;background:#0a0604;color:#f0e6d0;border:1px solid #5a3d1f;border-radius:3px;padding:2px;font-size:9px"><option>S2US</option></select>
+            </div>
+            <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px">
+              <div style="color:#e8c96a;font-size:9px;font-weight:700">SIMULER MEULE/GEMME</div>
+              <select style="width:100%;background:#0a0604;color:#f0e6d0;border:1px solid #5a3d1f;border-radius:3px;padding:2px;font-size:9px;margin-top:3px"><option>Rare Grind</option></select>
+              <select style="width:100%;background:#0a0604;color:#f0e6d0;border:1px solid #5a3d1f;border-radius:3px;padding:2px;font-size:9px;margin-top:2px"><option>Hero Gem</option></select>
+            </div>
+            <div style="background:#0a0604;border:1px solid #3d2818;border-radius:4px;padding:6px">
+              <div style="color:#e8c96a;font-size:9px;font-weight:700">MARQUE RUNE</div>
+              <select style="width:100%;background:#0a0604;color:#f0e6d0;border:1px solid #5a3d1f;border-radius:3px;padding:2px;font-size:9px;margin-top:3px"><option>-</option></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save -->
+        <button style="background:qlineargradient(180deg,#c67032,#8b4a1f);background:#c67032;color:#0a0604;border:none;border-radius:4px;padding:8px;font-size:12px;font-weight:700;letter-spacing:1px">SAVE</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:12px">
+  <p class="subtitle">
+    <strong>Résumé de ce que j'ai compris :</strong><br>
+    · Pas de sous-onglets, une seule page <br>
+    · Gauche : boutons +/-/↑/↓ · Importer / Exporter / <b>Test</b> (ouvre modale testeur) · liste catégorisée · réglages globaux de power-up (Hero +12, Legend +12, Grindstone, Gem) <br>
+    · Droite : éditeur complet du filtre sélectionné (Taper, Niveau, Rareté, Slot, ★, Classe, Main, Innate, Sous-propriétés avec obligatoire/optionnel + compteur, Efficacité, Meule, Gemme, Marque, Save) <br>
+    · Le bouton <b>Test</b> ouvre une modale où tu saisis/colles une rune → verdict par filtre + suggestion meule/gemme à +12
+  </p>
+</div>
