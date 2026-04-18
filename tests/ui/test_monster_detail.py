@@ -38,3 +38,37 @@ def test_set_monster_none_shows_empty_state(qapp):
     d = MonsterDetail()
     d.set_monster(None)
     assert d is not None
+
+
+def _rune(slot: int, set_name: str = "Violent", main: str = "ATQ%", val: float = 63.0) -> Rune:
+    return Rune(
+        set=set_name, slot=slot, stars=6, grade="Legend", level=12,
+        main_stat=SubStat(type=main, value=val),
+        prefix=None, substats=[],
+    )
+
+
+def test_detail_shows_6_slot_cards(qapp):
+    d = MonsterDetail()
+    runes = [_rune(i) for i in range(1, 7)]
+    d.set_monster(_monster(runes=runes))
+    assert len(d._slot_widgets) == 6
+
+
+def test_empty_slot_shows_placeholder(qapp):
+    d = MonsterDetail()
+    runes = [_rune(1), _rune(3)]
+    d.set_monster(_monster(runes=runes))
+    assert len(d._slot_widgets) == 6
+    texts = [w.findChild(QLabel, "slot_content").text() for w in d._slot_widgets]
+    assert "Vide" in texts[1]
+    assert "Vide" in texts[3]
+
+
+def test_filled_slot_shows_set_and_main(qapp):
+    d = MonsterDetail()
+    runes = [_rune(1, set_name="Violent", main="ATQ%", val=63.0)]
+    d.set_monster(_monster(runes=runes))
+    content = d._slot_widgets[0].findChild(QLabel, "slot_content").text()
+    assert "Violent" in content
+    assert "ATQ%" in content

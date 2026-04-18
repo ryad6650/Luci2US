@@ -81,11 +81,45 @@ class MonsterDetail(QWidget):
 
         outer.addWidget(header)
 
-        # --- Slots de runes (placeholder, Task 6 remplit) ---
+        # --- 6 slots de runes ---
         self._slots_frame = QFrame()
         self._slots_grid = QGridLayout(self._slots_frame)
         self._slots_grid.setContentsMargins(0, 0, 0, 0)
         self._slots_grid.setSpacing(8)
+
+        self._slot_widgets: list[QFrame] = []
+        for slot_num in range(1, 7):
+            card = QFrame()
+            card.setObjectName(f"slot_{slot_num}")
+            card.setStyleSheet(
+                f"QFrame#slot_{slot_num} {{ background:rgba(26,15,7,0.7);"
+                f" border:1px solid {theme.COLOR_BORDER_FRAME}; border-radius:4px; }}"
+            )
+            card_lay = QVBoxLayout(card)
+            card_lay.setContentsMargins(10, 8, 10, 8)
+            card_lay.setSpacing(4)
+
+            header_lbl = QLabel(f"SLOT {slot_num}")
+            header_lbl.setStyleSheet(
+                f"color:{theme.COLOR_GOLD}; font-size:10px; font-weight:700;"
+                f" letter-spacing:1px;"
+            )
+            card_lay.addWidget(header_lbl)
+
+            content = QLabel("Vide")
+            content.setObjectName("slot_content")
+            content.setWordWrap(True)
+            content.setStyleSheet(
+                f"color:{theme.COLOR_TEXT_DIM}; font-size:11px;"
+            )
+            card_lay.addWidget(content)
+            card_lay.addStretch()
+
+            self._slot_widgets.append(card)
+            row = (slot_num - 1) // 3
+            col = (slot_num - 1) % 3
+            self._slots_grid.addWidget(card, row, col)
+
         outer.addWidget(self._slots_frame, 1)
 
         outer.addStretch()
@@ -116,3 +150,23 @@ class MonsterDetail(QWidget):
                 ))
         except Exception:
             self._icon.clear()
+
+        by_slot = {r.slot: r for r in monster.equipped_runes}
+        for slot_num in range(1, 7):
+            content_label = self._slot_widgets[slot_num - 1].findChild(QLabel, "slot_content")
+            rune = by_slot.get(slot_num)
+            if rune is None:
+                content_label.setText("Vide")
+                content_label.setStyleSheet(
+                    f"color:{theme.COLOR_TEXT_DIM}; font-size:11px;"
+                )
+            else:
+                main = rune.main_stat
+                eff = f" \u00b7 Eff {rune.swex_efficiency:.0f}%" if rune.swex_efficiency is not None else ""
+                content_label.setText(
+                    f"{rune.set} \u2605{rune.stars} +{rune.level}\n"
+                    f"{main.type} +{main.value:g}{eff}"
+                )
+                content_label.setStyleSheet(
+                    f"color:{theme.COLOR_TEXT_MAIN}; font-size:11px;"
+                )
