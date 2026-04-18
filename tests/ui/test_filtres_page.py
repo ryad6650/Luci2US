@@ -89,3 +89,77 @@ def test_page_moves_filter_on_panel_move_signal(qapp, tmp_path, monkeypatch):
     page._list_panel.set_filters(page._filters)
     page._list_panel.filter_moved.emit(2, 0)
     assert [f.name for f in page._filters] == ["C", "A", "B"]
+
+
+def test_page_import_replaces_filter_list(qapp, tmp_path, monkeypatch):
+    """Import : l'utilisateur choisit un fichier -> les filtres de ce fichier
+    remplacent ceux du panneau (et le chemin courant est mis a jour)."""
+    from s2us_writer import save_s2us_file
+    from s2us_filter import S2USFilter
+    src = tmp_path / "new.s2us"
+    save_s2us_file(str(src), [S2USFilter(name="Imported",
+                                         sub_requirements={}, min_values={})], {})
+    cfg = tmp_path / "c.json"
+    cfg.write_text("{}", encoding="utf-8")
+    from ui.filtres import filtres_page
+    monkeypatch.setattr(filtres_page, "_CONFIG_PATH", str(cfg))
+
+    from PySide6.QtWidgets import QFileDialog
+    monkeypatch.setattr(
+        QFileDialog, "getOpenFileName",
+        staticmethod(lambda *a, **kw: (str(src), "")),
+    )
+
+    page = FiltresPage()
+    assert page._filters == []
+    page._list_panel.import_requested.emit()
+    assert len(page._filters) == 1
+    assert page._filters[0].name == "Imported"
+    assert page._filter_file_path == str(src)
+
+
+def test_page_export_writes_filters_to_chosen_path(qapp, tmp_path, monkeypatch):
+    from s2us_filter import S2USFilter, load_s2us_file
+    from ui.filtres import filtres_page
+    cfg = tmp_path / "c.json"
+    cfg.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(filtres_page, "_CONFIG_PATH", str(cfg))
+
+    out = tmp_path / "out.s2us"
+    from PySide6.QtWidgets import QFileDialog
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName",
+        staticmethod(lambda *a, **kw: (str(out), "")),
+    )
+
+    page = FiltresPage()
+    page._filters = [S2USFilter(name="X", sub_requirements={}, min_values={})]
+    page._list_panel.export_requested.emit()
+
+    assert out.exists()
+    reloaded, _ = load_s2us_file(str(out))
+    assert reloaded[0].name == "X"
+
+
+def test_page_test_opens_rune_tester_modal(qapp, tmp_path, monkeypatch):
+    cfg = tmp_path / "c.json"
+    cfg.write_text("{}", encoding="utf-8")
+    from ui.filtres import filtres_page
+    monkeypatch.setattr(filtres_page, "_CONFIG_PATH", str(cfg))
+
+    page = FiltresPage()
+
+    called = {"open": 0}
+
+    class _StubDialog:
+        def __init__(self, *a, **kw):
+            called["open"] += 1
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(
+        "ui.filtres.filtres_page.RuneTesterModal", _StubDialog,
+    )
+    page._list_panel.test_requested.emit()
+    assert called["open"] == 1

@@ -6,12 +6,14 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QLabel, QSplitter, QVBoxLayout, QWidget,
+    QFileDialog, QLabel, QSplitter, QVBoxLayout, QWidget,
 )
 
 from s2us_filter import S2USFilter, load_s2us_file
+from s2us_writer import save_s2us_file
 from ui import theme
 from ui.filtres.filter_list_panel import FilterListPanel
+from ui.filtres.rune_tester_modal import RuneTesterModal
 
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -57,6 +59,9 @@ class FiltresPage(QWidget):
         self._list_panel.filter_added.connect(self._on_filter_added)
         self._list_panel.filter_removed.connect(self._on_filter_removed)
         self._list_panel.filter_moved.connect(self._on_filter_moved)
+        self._list_panel.import_requested.connect(self._on_import)
+        self._list_panel.export_requested.connect(self._on_export)
+        self._list_panel.test_requested.connect(self._on_test)
 
     def _load_filters_from_config(self) -> None:
         cfg = _read_config()
@@ -96,3 +101,30 @@ class FiltresPage(QWidget):
         self._filters.insert(dst, item)
         self._list_panel.set_filters(self._filters)
         self._list_panel.select_index(dst)
+
+    def _on_import(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Importer un fichier .s2us", "",
+            "Filtres S2US (*.s2us);;Tous les fichiers (*.*)",
+        )
+        if not path:
+            return
+        try:
+            self._filters, self._global_settings = load_s2us_file(path)
+            self._filter_file_path = path
+        except (OSError, json.JSONDecodeError):
+            return
+        self._list_panel.set_filters(self._filters)
+
+    def _on_export(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Exporter un fichier .s2us", self._filter_file_path or "",
+            "Filtres S2US (*.s2us);;Tous les fichiers (*.*)",
+        )
+        if not path:
+            return
+        save_s2us_file(path, self._filters, self._global_settings)
+
+    def _on_test(self) -> None:
+        dlg = RuneTesterModal(filters=self._filters, parent=self)
+        dlg.exec()
