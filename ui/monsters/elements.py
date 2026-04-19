@@ -229,14 +229,17 @@ class MonsterPortrait(QLabel):
         p.setClipPath(path)
 
         if self._pixmap is not None:
+            dpr = self.devicePixelRatioF() or 1.0
+            target = max(1, int(round(s * dpr)))
             scaled = self._pixmap.scaled(
-                s, s,
+                target, target,
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                 Qt.TransformationMode.SmoothTransformation,
             )
-            dx = (scaled.width() - s) // 2
-            dy = (scaled.height() - s) // 2
-            p.drawPixmap(0, 0, scaled, dx, dy, s, s)
+            scaled.setDevicePixelRatio(dpr)
+            dx = (scaled.width() / dpr - s) / 2
+            dy = (scaled.height() / dpr - s) / 2
+            p.drawPixmap(QPointF(-dx, -dy), scaled)
         else:
             # Placeholder: diagonal element-tinted gradient + silhouette
             hue = (self._name_seed % 360)

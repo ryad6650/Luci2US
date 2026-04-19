@@ -27,3 +27,12 @@ Thumbs.db
 
 # Fetched assets (run scripts/fetch_swarfarm_assets.py)
 assets/swarfarm/
+
+# HD icons (regen via scripts/upscale_monster_icons.py)
+assets/monsters_hd/
+
+# Real-ESRGAN binary (download from https://github.com/xinntao/Real-ESRGAN/releases)
+tools/realesrgan/
+
+# Upscale demo artefacts
+_hd_demo/
