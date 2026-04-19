@@ -22,6 +22,7 @@ from ui.runes.runes_page import RunesPage
 from ui.settings.settings_page import SettingsPage
 from ui.sidebar import Sidebar
 from ui.scan.scan_page import ScanPage
+from ui.stats_history.stats_history_page import StatsHistoryPage
 from ui.widgets.background import BackgroundPane
 from ui.widgets.title_bar import WinTitleBar
 
@@ -85,8 +86,9 @@ class MainWindow(QMainWindow):
         # Index 3 : Monstres
         self.monsters_page = MonstersPage()
         self._stack.addWidget(self.monsters_page)
-        # Index 4 : Stats & Historique (placeholder, Plan 4)
-        self._stack.addWidget(_placeholder("Stats & Historique - a implementer"))
+        # Index 4 : Stats & Historique
+        self.stats_history_page = StatsHistoryPage()
+        self._stack.addWidget(self.stats_history_page)
         # Index 5 : Profils
         self._stack.addWidget(self.profile_page)
         # Index 6 : Paramètres

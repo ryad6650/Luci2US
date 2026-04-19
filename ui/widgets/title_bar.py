@@ -6,11 +6,19 @@ QMainWindow wires them to its own methods.
 """
 from __future__ import annotations
 
+import os
+
 from PySide6.QtCore import Qt, QPoint, Signal
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtGui import QMouseEvent, QPixmap
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from ui import theme
+
+
+_LOGO_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "assets", "logo.png",
+)
 
 
 class _SysButton(QPushButton):
@@ -56,13 +64,23 @@ class WinTitleBar(QFrame):
         lay.setContentsMargins(14, 0, 0, 0)
         lay.setSpacing(10)
 
-        logo = QLabel("L")
-        logo.setFixedSize(14, 14)
+        logo = QLabel()
+        size = 20
+        logo.setFixedSize(size, size)
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo.setStyleSheet(
-            f"background:{theme.D.ACCENT}; color:#0b0b0f;"
-            f"font-weight:800; font-size:9px; border-radius:3px;"
-        )
+        if os.path.isfile(_LOGO_PATH):
+            pix = QPixmap(_LOGO_PATH).scaled(
+                size, size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            logo.setPixmap(pix)
+        else:
+            logo.setText("L")
+            logo.setStyleSheet(
+                f"background:{theme.D.ACCENT}; color:#0b0b0f;"
+                f"font-weight:800; font-size:9px; border-radius:3px;"
+            )
         lay.addWidget(logo, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._title = QLabel(title)

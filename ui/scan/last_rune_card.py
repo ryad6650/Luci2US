@@ -246,6 +246,23 @@ class LastRuneCard(QFrame):
         delta = int(max(0, time.time() - self._ts))
         self._ago.setText(f"il y a {_fmt_ago(delta)}")
 
+    def set_empty(self) -> None:
+        """Reset card to its initial placeholder state (used on new scan session)."""
+        self._ts = 0.0
+        self._ago.setText("il y a -")
+        self._halo.set_color(theme.D.ACCENT)
+        self._glyph.set_values(grade=6, slot=2, color=theme.D.ACCENT)
+        self._set_label.setText("--- \u00B7 SLOT -")
+        self._set_label.setStyleSheet(
+            f"color:{theme.D.ACCENT}; font-family:'{theme.D.FONT_UI}';"
+            f"font-size:13px; font-weight:700; letter-spacing:1px;"
+        )
+        self._main.setText("---")
+        self._sub_meta.setText("---")
+        for row in self._subs:
+            row.set_empty()
+        self._verdict.set_efficiency(0.0)
+
     def update_rune(self, rune: Rune, verdict: Verdict) -> None:
         self._ts = time.time()
         color = theme.set_color(rune.set)

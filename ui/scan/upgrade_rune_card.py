@@ -199,6 +199,9 @@ class UpgradeRuneCard(QFrame):
         self.set_empty()
 
     def set_empty(self) -> None:
+        self._ts = 0.0
+        self._prev_eff = None
+        self._prev_subs = {}
         self._ago.setText("en attente")
         self._main.setText("---")
         self._set_slot.setText("aucune amelioration pour l'instant")

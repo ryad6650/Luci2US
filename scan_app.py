@@ -12,6 +12,7 @@ import os
 import sys
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from auto_mode import AutoMode, State
@@ -20,6 +21,8 @@ from profile_loader import load_profile_from_dict
 from profile_store import save_profile_payload
 from swex_bridge import detect_drops_dir
 from ui.main_window import MainWindow
+from ui.widgets.splash import SplashScreen
+from ui.widgets.verdict_overlay import VerdictOverlay
 
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
@@ -60,6 +63,7 @@ DEFAULT_CONFIG = {
         "poll_interval": 0.5,
     },
     "s2us": {"filter_file": "", "artifact_eff_threshold": 70},
+    "overlay": {"enabled": True, "duration_ms": 3000},
 }
 
 
@@ -76,6 +80,14 @@ def _load_config() -> dict:
     return cfg
 
 
+def _save_config(cfg: dict) -> None:
+    try:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+    except OSError:
+        pass
+
+
 def _estimate_mana(rune: Rune) -> int:
     base = {5: 7500, 6: 15000}.get(rune.stars, 3000)
     grade_mult = {
@@ -85,12 +97,66 @@ def _estimate_mana(rune: Rune) -> int:
     return int(base * grade_mult)
 
 
+def _apply_app_icon(app: QApplication, window) -> None:
+    """Icône Luci2US pour la fenêtre + barre des tâches Windows."""
+    # Windows : AppUserModelID propre à l'app, sinon la barre des tâches
+    # hérite de l'icône de python.exe.
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Luci2US.ScanApp")
+        except Exception:
+            pass
+
+    assets_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+    for fname in ("icon.ico", "logo.png"):
+        path = os.path.join(assets_dir, fname)
+        if os.path.isfile(path):
+            icon = QIcon(path)
+            if not icon.isNull():
+                app.setWindowIcon(icon)
+                window.setWindowIcon(icon)
+                return
+
+
 def main() -> int:
     cfg = _load_config()
 
     app = QApplication(sys.argv)
+
+    splash = SplashScreen(duration_ms=1800)
+    splash.start()
+    app.processEvents()
+
     w = MainWindow()
-    w.show()
+    _apply_app_icon(app, w)
+    splash.finished.connect(w.show)
+
+    overlay_cfg = cfg.setdefault("overlay", {})
+    overlay_cfg.setdefault("enabled", True)
+    overlay_cfg.setdefault("duration_ms", 3000)
+    overlay: VerdictOverlay | None = None
+    if overlay_cfg.get("enabled", True):
+        pos = None
+        if "x" in overlay_cfg and "y" in overlay_cfg:
+            pos = (int(overlay_cfg["x"]), int(overlay_cfg["y"]))
+
+        def _on_overlay_moved(x: int, y: int) -> None:
+            overlay_cfg["x"] = x
+            overlay_cfg["y"] = y
+            _save_config(cfg)
+
+        overlay = VerdictOverlay(
+            pos=pos,
+            duration_ms=int(overlay_cfg.get("duration_ms", 3000)),
+            on_position_changed=_on_overlay_moved,
+        )
+        w.controller.rune_evaluated.connect(
+            overlay.on_rune_signal, type=Qt.ConnectionType.QueuedConnection,
+        )
+        w.controller.rune_upgraded.connect(
+            overlay.on_rune_signal, type=Qt.ConnectionType.QueuedConnection,
+        )
 
     def _payload(rune: Rune, verdict: Verdict) -> tuple:
         d = verdict.details or {}

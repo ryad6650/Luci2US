@@ -31,3 +31,24 @@ def test_counters_increment(qapp):
     assert page._stats._obtained._value.text() == "2"
     assert page._stats._kept._value.text() == "1"
     assert page._stats._sold._value.text() == "1"
+
+
+def test_set_active_true_resets_session(qapp):
+    page = ScanPage()
+    r, v = _rune(decision="KEEP", score=80.0)
+    page.on_rune(r, v, mana=10, swop=(0, 0), s2us=(0, 0))
+    r, v = _rune(decision="SELL", score=20.0)
+    page.on_rune(r, v, mana=10, swop=(0, 0), s2us=(0, 0))
+
+    page.set_active(True)
+
+    assert page._total == 0
+    assert page._kept == 0
+    assert page._sold == 0
+    assert page._eff_sum == 0.0
+    assert page._stats._obtained._value.text() == "0"
+    assert page._stats._kept._value.text() == "0"
+    assert page._stats._sold._value.text() == "0"
+    assert len(page._history._items) == 0
+    assert page._last_card._main.text() == "---"
+    assert page._upgrade_card._main.text() == "---"

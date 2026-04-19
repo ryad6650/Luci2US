@@ -82,7 +82,28 @@
       "Bash(sort -k5 -n -r)",
       "Bash(grep -E \"\\\\.cs$\")",
       "Bash(awk '{print $9, $5}')",
-      "Bash(sort -k2 -nr)"
+      "Bash(sort -k2 -nr)",
+      "Bash(awk -F_ '{print $1\"_\"$2}')",
+      "Read(//c/Users/louis/AppData/Local/com.com2us.smon.pc.steam.global.normal/**)",
+      "Read(//c/Users/louis/AppData/Local/SummonersWarSteam/**)",
+      "Bash(grep -iE \"_hr\\\\.png$\")",
+      "Bash(grep -E \"^unit_mdl.*\\\\.png$\")",
+      "Bash(grep -cE \"^unit_mdl.*\\\\.png$\")",
+      "Bash(curl *)",
+      "WebFetch(domain:summoners-war.fandom.com)",
+      "WebFetch(domain:swarfarm.com)",
+      "WebFetch(domain:models.spriters-resource.com)",
+      "WebFetch(domain:tool.swop.one)",
+      "Bash(python3 -c \"import struct; d=open\\('/tmp/neal.png','rb'\\).read\\(24\\); print\\('dim:', struct.unpack\\('>II', d[16:24]\\)\\)\")",
+      "WebFetch(domain:www.spriters-resource.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(mkdir -p \"C:/Users/louis/Luci2US/_hd_demo\")",
+      "Bash(./realesrgan-ncnn-vulkan.exe -i \"C:/Users/louis/Luci2US/assets/monsters/unit_icon_0068_4_3.png\" -o \"C:/Users/louis/Luci2US/_hd_demo/sample_x4_anime.png\" -n realesrgan-x4plus-anime -s 4)",
+      "Bash(./realesrgan-ncnn-vulkan.exe -i \"C:/Users/louis/Luci2US/assets/monsters/unit_icon_0068_0_3.png\" -o \"C:/Users/louis/Luci2US/_hd_demo/neal_anime_x4.png\" -n realesrgan-x4plus-anime -s 4)",
+      "Bash([ -f \"C:/Users/louis/Luci2US/assets/monsters/$f\" ])",
+      "Bash(./realesrgan-ncnn-vulkan.exe -i C:/Users/louis/Luci2US/assets/monsters/__TRACKED_VAR__ -o C:/Users/louis/Luci2US/_hd_demo/hd___TRACKED_VAR__ -n realesrgan-x4plus-anime -s 4)",
+      "Bash(grep -cE \"^unit_icon_.*\\\\.png$\")",
+      "Bash(powershell *)"
     ]
   }
 }

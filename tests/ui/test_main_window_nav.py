@@ -57,6 +57,14 @@ def test_runes_index_is_runes_page(qapp):
     assert isinstance(mw._stack.currentWidget(), RunesPage)
 
 
+def test_stats_history_index_is_stats_history_page(qapp):
+    from ui.stats_history.stats_history_page import StatsHistoryPage
+    mw = MainWindow()
+    mw._on_nav("stats_history")
+    current = mw._stack.currentWidget()
+    assert isinstance(current, StatsHistoryPage)
+
+
 def test_profile_loaded_signal_feeds_runes_page(qapp):
     from models import Monster, Rune, SubStat
     mw = MainWindow()

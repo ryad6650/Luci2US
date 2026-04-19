@@ -77,12 +77,24 @@ class ScanPage(QWidget):
     def set_active(self, active: bool) -> None:
         self._header.set_active(active)
         if active:
+            self._reset_session()
             self._started_at = time.monotonic()
             self._history.set_session_start(self._started_at)
             self._timer.start()
             self._tick_time()
         else:
             self._timer.stop()
+
+    def _reset_session(self) -> None:
+        """Wipe counters, feed and hero cards on each new scan session."""
+        self._total = 0
+        self._kept = 0
+        self._sold = 0
+        self._eff_sum = 0.0
+        self._stats.update_counts(total=0, kept=0, sold=0, avg_eff=0.0)
+        self._history.clear()
+        self._last_card.set_empty()
+        self._upgrade_card.set_empty()
 
     def on_rune(
         self, rune: Rune, verdict: Verdict, mana: int,
