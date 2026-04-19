@@ -9,6 +9,8 @@ from models import (
     ORIG_SUBS_BY_RARITY,
     ROLL_MAX_5,
     ROLL_MAX_6,
+    ROLL_MID_5,
+    ROLL_MID_6,
     ROLL_MIN_5,
     ROLL_MIN_6,
     Rune,
@@ -33,9 +35,11 @@ def _min_roll(stat: str, stars: int) -> int:
 
 
 def _mid_roll(stat: str, stars: int) -> int:
-    """Valeur moyenne d'un roll (= (min+max)//2). Évite d'énumérer toutes
-    les valeurs possibles entre min et max."""
-    return (_min_roll(stat, stars) + _max_roll(stat, stars)) // 2
+    """Valeur d'un roll alignée sur Script2us (-.18.cs l.1743).
+    Le bot utilise ROLL_MAX par grade comme valeur plate (pas de tirage,
+    pas de (min+max)//2) : 6★ → ROLL_MAX_6, 5★ → ROLL_MAX_5."""
+    table = ROLL_MID_6 if stars >= 6 else ROLL_MID_5
+    return table.get(stat, 0)
 
 
 def _roll_value(stat: str, stars: int, mode: str) -> int:

@@ -84,6 +84,13 @@ ROLL_MIN_5: dict[str, int] = {
     "DC": 3, "RES": 4, "PRE": 4, "ATQ": 8, "DEF": 8, "PV": 108,
 }
 
+# Valeur de roll utilisée par Script2us (-.18.cs l.1743) : branche 6★ si
+# grade == 1032642102, sinon branche 5★. Les valeurs du bot sont donc
+# identiques aux ROLL_MAX par grade — pas de tirage aléatoire, flat = max SW.
+# Utilisées en mode 'mid' pour matcher exactement la projection du bot.
+ROLL_MID_6: dict[str, int] = dict(ROLL_MAX_6)
+ROLL_MID_5: dict[str, int] = dict(ROLL_MAX_5)
+
 # Nombre de subs présents à +0 selon la rareté (Hero a 3 subs, 4e apparaît à +12).
 ORIG_SUBS_BY_RARITY: dict[str, int] = {
     "Normal": 0, "Magique": 1, "Rare": 2, "Heroique": 3, "Legendaire": 4,
