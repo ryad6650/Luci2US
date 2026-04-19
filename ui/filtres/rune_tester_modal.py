@@ -445,6 +445,7 @@ class RuneTesterModal(QDialog):
             )
             gem_val = 0
             rolls_val = 0
+            is_added_sub = i >= len(orig.substats)
 
             expected_gem = (
                 GEM_MAX.get(fr, [0, 0, 0, 0, 0])[gem] if gem > 0 else 0
@@ -470,7 +471,8 @@ class RuneTesterModal(QDialog):
             if gem_val > 0:
                 parts.append(f"Gemme +{gem_val}")
             if rolls_val > 0:
-                parts.append(f"Rolls +{rolls_val}")
+                label = "Base" if is_added_sub else "Rolls"
+                parts.append(f"{label} +{rolls_val}")
             if grind_val > 0:
                 parts.append(f"Meule +{grind_val}")
             parts.append(f"Final {final}")

@@ -78,7 +78,11 @@
       "WebFetch(domain:summonerswar.spokland.com)",
       "WebFetch(domain:summonerswar.fandom.com)",
       "WebFetch(domain:www.swmasters.com)",
-      "WebFetch(domain:summonerswarskyarena.info)"
+      "WebFetch(domain:summonerswarskyarena.info)",
+      "Bash(sort -k5 -n -r)",
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(awk '{print $9, $5}')",
+      "Bash(sort -k2 -nr)"
     ]
   }
 }
