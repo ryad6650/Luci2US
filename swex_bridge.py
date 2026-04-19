@@ -249,19 +249,21 @@ class SWEXBridge:
                             self.on_rune_drop(rune)
             return
 
-        # New plugin format: rune fields spread at top level
-        if event in (
-            "BattleDungeonResult_v2",
-            "BattleScenarioResult",
-            "BattleDimensionHoleDungeonResult_v2",
-            "BuyGuildShopRune",
-            "ConfirmRune",
-        ):
-            rune = parse_rune(payload)
-            if self.on_rune_drop:
-                self.on_rune_drop(rune)
+        # New plugin format: rune fields spread at top level. The plugin tags the
+        # payload with kind="drop"|"upgrade"; fall back to matching the event
+        # name when the tag is absent (older payloads, tests).
+        kind = payload.get("kind")
+        if kind is None:
+            if any(tok in event for tok in ("Upgrade", "Amplify", "Convert", "Revalue")):
+                kind = "upgrade"
+            elif "slot_no" in payload or "rune" in payload:
+                kind = "drop"
 
-        elif event in ("UpgradeRune", "AmplifyRune"):
+        if kind == "upgrade":
             rune = parse_rune(payload)
             if self.on_rune_upgrade:
                 self.on_rune_upgrade(rune, event, rune.level)
+        elif kind == "drop":
+            rune = parse_rune(payload)
+            if self.on_rune_drop:
+                self.on_rune_drop(rune)

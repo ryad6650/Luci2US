@@ -133,13 +133,8 @@ def main() -> int:
         on_profile_loaded=on_profile_loaded,
     )
 
-    def toggle_mode() -> None:
-        if mode.state == State.IDLE:
-            mode.start()
-        else:
-            mode.stop()
-
-    w.scan_page.start_requested.connect(toggle_mode)
+    # Auto-start so no rune is missed while the user waits on a Start click.
+    mode.start()
 
     exit_code = app.exec()
     mode.stop()

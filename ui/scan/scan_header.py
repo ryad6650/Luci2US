@@ -1,9 +1,9 @@
-"""Scan page header: LIVE FEED eyebrow + h1 + Farming pill + Pause button."""
+"""Scan page header: LIVE FEED eyebrow + h1 + Farming pill."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal, QPropertyAnimation, QEasingCurve, Property
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, Property
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ui import theme
 
@@ -53,8 +53,6 @@ class _StatusDot(QLabel):
 
 
 class ScanHeader(QFrame):
-    start_clicked = Signal()
-
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._active = False
@@ -106,23 +104,6 @@ class ScanHeader(QFrame):
         pl.addWidget(self._uptime, 0, Qt.AlignmentFlag.AlignVCenter)
         lay.addWidget(self._pill, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        # ── pause / start button ──
-        self._btn = QPushButton("\u25B6  Start")
-        self._btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn.setFixedHeight(34)
-        self._btn.clicked.connect(self.start_clicked.emit)
-        self._btn.setStyleSheet(
-            f"""
-            QPushButton {{
-                padding:0 18px; border:none; border-radius:999px;
-                background:rgba(255,255,255,0.08); color:{theme.D.FG};
-                font-family:'{theme.D.FONT_UI}'; font-size:12px; font-weight:600;
-            }}
-            QPushButton:hover {{ background:rgba(255,255,255,0.14); }}
-            """
-        )
-        lay.addWidget(self._btn, 0, Qt.AlignmentFlag.AlignVCenter)
-
         self._apply_state()
 
     def set_active(self, active: bool) -> None:
@@ -138,13 +119,11 @@ class ScanHeader(QFrame):
         if self._active:
             color = theme.D.OK
             label = "Farming"
-            btn_text = "\u25A0  Pause"
             pill_bg = "rgba(93,211,158,0.10)"
             pill_border = "rgba(93,211,158,0.25)"
         else:
             color = theme.D.FG_MUTE
             label = "Paused"
-            btn_text = "\u25B6  Start"
             pill_bg = "rgba(122,97,104,0.12)"
             pill_border = "rgba(122,97,104,0.22)"
 
@@ -160,6 +139,6 @@ class ScanHeader(QFrame):
             f"color:{color}; font-family:'{theme.D.FONT_UI}';"
             f"font-size:11px; font-weight:600;"
         )
+        self._pill_label.setText(label)
         self._dot.set_color(color)
         self._dot.set_pulsing(self._active)
-        self._btn.setText(btn_text)

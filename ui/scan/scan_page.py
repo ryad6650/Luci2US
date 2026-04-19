@@ -1,14 +1,13 @@
 """Scan page — live dashboard (design_handoff_scan / variation D).
 
 Layout:
-    ScanHeader       (live feed, Farming/Paused pill, Start/Pause btn)
+    ScanHeader       (live feed, Farming/Paused pill)
     SessionStats     (4 glass counter cards)
     LastRuneCard | UpgradeRuneCard      (grid 1.2fr / 1fr)
     HistoryList      (2-col grid, scrollable)
 
 Public API preserved from the previous implementation so scan_controller /
 main_window / tests don't need to change:
-    - Signal start_requested
     - set_active(bool)
     - on_rune(rune, verdict, mana, swop, s2us, set_bonus)
     - on_rune_upgraded(rune, verdict, mana, swop, s2us, set_bonus)
@@ -16,7 +15,7 @@ main_window / tests don't need to change:
 from __future__ import annotations
 import time
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QGridLayout, QVBoxLayout, QWidget
 
 from models import Rune, Verdict
@@ -30,8 +29,6 @@ from ui.scan.upgrade_rune_card import UpgradeRuneCard
 
 
 class ScanPage(QWidget):
-    start_requested = Signal()
-
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setStyleSheet(
@@ -53,7 +50,6 @@ class ScanPage(QWidget):
         outer.setSpacing(18)
 
         self._header = ScanHeader()
-        self._header.start_clicked.connect(self.start_requested.emit)
         outer.addWidget(self._header)
 
         self._stats = SessionStats()
