@@ -71,7 +71,14 @@
       "Bash(.venv/Scripts/python.exe -c \"from ui.monsters.monsters_page import MonstersPage; from ui.monsters.monster_detail_modal import MonsterDetailModal; print\\('imports ok'\\)\")",
       "Bash(xargs grep *)",
       "Bash(taskkill //F //IM python.exe //FI \"WINDOWTITLE eq Luci2US*\")",
-      "Bash(taskkill //F //IM pythonw.exe //FI \"WINDOWTITLE eq Luci2US*\")"
+      "Bash(taskkill //F //IM pythonw.exe //FI \"WINDOWTITLE eq Luci2US*\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(curl -s -A \"Mozilla/5.0\" \"https://swarfarm.com/bestiary/runes/\" -o /tmp/swarfarm_runes.html --max-time 30)",
+      "Bash(curl -s -A \"Mozilla/5.0\" \"https://www.swarfarm.com/api/v2/runes/\" --max-time 30 -o /tmp/swarfarm_api.json)",
+      "WebFetch(domain:summonerswar.spokland.com)",
+      "WebFetch(domain:summonerswar.fandom.com)",
+      "WebFetch(domain:www.swmasters.com)",
+      "WebFetch(domain:summonerswarskyarena.info)"
     ]
   }
 }
