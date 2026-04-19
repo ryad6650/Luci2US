@@ -1,17 +1,28 @@
-"""Left sidebar of the Filtres page (design_handoff_filters > FilterTreeSidebar).
+"""Left sidebar of the Filtres page — multi-dossier tree.
 
 Structure (top → bottom):
     - Header       : eyebrow "BIBLIOTHÈQUE" + title "Filtres S2US"
-    - Action grid  : + / − / ↑ / ↓  (primary pill for +)
+    - Action grid  : + / − / ↑ / ↓
     - Import row   : Importer / Exporter / Test
     - Search box
-    - Tree (single virtual root "Filtres" holding N children — the flat list)
+    - Tree (one top-level node per dossier, filters as children)
     - Footer       : running counts
 
-Public API preserved so filtres_page.py doesn't need to change:
-    signals: filter_selected, filter_added, filter_removed, filter_moved,
-             import_requested, export_requested, test_requested
-    methods: set_filters, select_index, current_index
+Public API:
+    signals:
+        filter_selected(int dossier_idx, int filter_idx)
+        dossier_selected(int dossier_idx)
+        filter_added(int dossier_idx)
+        filter_removed(int dossier_idx, int filter_idx)
+        dossier_removed(int dossier_idx)
+        filter_moved(int dossier_idx, int src, int dst)
+        dossier_renamed(int dossier_idx, str new_name)
+        import_requested, export_requested, test_requested
+    methods:
+        set_dossiers(list[Dossier])
+        select_filter(int dossier_idx, int filter_idx)
+        select_dossier(int dossier_idx)
+        current_selection() -> tuple | None
 """
 from __future__ import annotations
 
@@ -22,8 +33,8 @@ from PySide6.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
-from s2us_filter import S2USFilter
 from ui import theme
+from ui.filtres.dossier import Dossier
 
 
 def _accent_btn(glyph: str, tooltip: str) -> QPushButton:
@@ -109,10 +120,13 @@ def _text_btn(label: str, primary: bool = False) -> QPushButton:
 
 
 class FilterListPanel(QWidget):
-    filter_selected = Signal(int)
-    filter_added = Signal()
-    filter_removed = Signal(int)
-    filter_moved = Signal(int, int)
+    filter_selected = Signal(int, int)
+    dossier_selected = Signal(int)
+    filter_added = Signal(int)
+    filter_removed = Signal(int, int)
+    dossier_removed = Signal(int)
+    filter_moved = Signal(int, int, int)
+    dossier_renamed = Signal(int, str)
     import_requested = Signal()
     export_requested = Signal()
     test_requested = Signal()
@@ -132,7 +146,8 @@ class FilterListPanel(QWidget):
             """
         )
 
-        self._filters: list[S2USFilter] = []
+        self._dossiers: list[Dossier] = []
+        self._suppress_item_changed = False
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -163,7 +178,7 @@ class FilterListPanel(QWidget):
         action_grid.setContentsMargins(12, 0, 12, 10)
         action_grid.setHorizontalSpacing(6)
         action_grid.setVerticalSpacing(0)
-        self._btn_add = _accent_btn("+", "Ajouter")
+        self._btn_add = _accent_btn("+", "Ajouter un filtre au dossier sélectionné")
         self._btn_remove = _ghost_btn("\u2212", "Supprimer")
         self._btn_up = _ghost_btn("\u25B2", "Monter")
         self._btn_down = _ghost_btn("\u25BC", "Descendre")
@@ -229,7 +244,11 @@ class FilterListPanel(QWidget):
         self._tree = QTreeWidget()
         self._tree.setHeaderHidden(True)
         self._tree.setIndentation(14)
-        self._tree.setRootIsDecorated(False)
+        self._tree.setRootIsDecorated(True)
+        self._tree.setEditTriggers(
+            QTreeWidget.EditTrigger.EditKeyPressed
+            | QTreeWidget.EditTrigger.DoubleClicked
+        )
         self._tree.setStyleSheet(
             f"""
             QTreeWidget {{
@@ -286,7 +305,7 @@ class FilterListPanel(QWidget):
         outer.addWidget(footer)
 
         # ── Wire signals ───────────────────────────────────────
-        self._btn_add.clicked.connect(self.filter_added.emit)
+        self._btn_add.clicked.connect(self._on_add)
         self._btn_remove.clicked.connect(self._on_remove)
         self._btn_up.clicked.connect(lambda: self._move(-1))
         self._btn_down.clicked.connect(lambda: self._move(+1))
@@ -294,52 +313,59 @@ class FilterListPanel(QWidget):
         self._btn_export.clicked.connect(self.export_requested.emit)
         self._btn_test.clicked.connect(self.test_requested.emit)
         self._tree.currentItemChanged.connect(self._on_item_changed)
+        self._tree.itemChanged.connect(self._on_item_edited)
 
     # ── Public API ─────────────────────────────────────────────
-    def set_filters(self, filters: list[S2USFilter]) -> None:
-        self._filters = filters
+    def set_dossiers(self, dossiers: list[Dossier]) -> None:
+        self._dossiers = dossiers
+        self._suppress_item_changed = True
         self._tree.clear()
-        root = QTreeWidgetItem(self._tree, ["Filtres"])
-        root.setExpanded(True)
-        # Make the virtual root unselectable so it behaves like a header.
-        flags = root.flags() & ~Qt.ItemFlag.ItemIsSelectable
-        root.setFlags(flags)
-        header_font = QFont(theme.D.FONT_UI)
-        header_font.setPointSize(9)
-        header_font.setWeight(QFont.Weight.Bold)
-        header_font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.6)
-        root.setFont(0, header_font)
-        root.setForeground(0, QColor(theme.D.FG_MUTE))
-        root.setText(0, f"Filtres · {len(filters)}")
-
-        for i, f in enumerate(filters):
-            child = QTreeWidgetItem(root, [f.name])
-            child.setData(0, Qt.ItemDataRole.UserRole, i)
-            if not f.enabled:
-                child.setForeground(0, QColor(theme.D.FG_MUTE))
+        dossier_font = QFont(theme.D.FONT_UI)
+        dossier_font.setPointSize(10)
+        dossier_font.setWeight(QFont.Weight.Bold)
+        for di, d in enumerate(dossiers):
+            root = QTreeWidgetItem(self._tree, [d.name])
+            root.setData(0, Qt.ItemDataRole.UserRole, ("dossier", di))
+            root.setFont(0, dossier_font)
+            root.setForeground(0, QColor(theme.D.ACCENT))
+            root.setFlags(root.flags() | Qt.ItemFlag.ItemIsEditable)
+            root.setExpanded(True)
+            for fi, f in enumerate(d.filters):
+                child = QTreeWidgetItem(root, [f.name])
+                child.setData(0, Qt.ItemDataRole.UserRole, ("filter", di, fi))
+                flags = child.flags() & ~Qt.ItemFlag.ItemIsEditable
+                child.setFlags(flags)
+                if not f.enabled:
+                    child.setForeground(0, QColor(theme.D.FG_MUTE))
         self._update_counts()
-        if filters:
-            self.select_index(0)
+        self._suppress_item_changed = False
 
-    def select_index(self, idx: int) -> None:
-        if not (0 <= idx < len(self._filters)):
+    def select_filter(self, didx: int, fidx: int) -> None:
+        if not (0 <= didx < self._tree.topLevelItemCount()):
             return
-        root = self._tree.topLevelItem(0)
-        if root is None or idx >= root.childCount():
+        root = self._tree.topLevelItem(didx)
+        if root is None or fidx >= root.childCount():
             return
-        self._tree.setCurrentItem(root.child(idx))
+        self._tree.setCurrentItem(root.child(fidx))
 
-    def current_index(self) -> int:
+    def select_dossier(self, didx: int) -> None:
+        if not (0 <= didx < self._tree.topLevelItemCount()):
+            return
+        root = self._tree.topLevelItem(didx)
+        if root is not None:
+            self._tree.setCurrentItem(root)
+
+    def current_selection(self) -> tuple | None:
         item = self._tree.currentItem()
         if item is None:
-            return -1
+            return None
         v = item.data(0, Qt.ItemDataRole.UserRole)
-        return int(v) if v is not None else -1
+        return tuple(v) if v is not None else None
 
     # ── Internal ──────────────────────────────────────────────
     def _update_counts(self) -> None:
-        total = len(self._filters)
-        active = sum(1 for f in self._filters if f.enabled)
+        total = sum(len(d.filters) for d in self._dossiers)
+        active = sum(1 for d in self._dossiers for f in d.filters if f.enabled)
         self._count_total.setText(f"{total} filtres")
         self._count_active.setText(f"{active} actifs")
 
@@ -349,26 +375,74 @@ class FilterListPanel(QWidget):
         v = cur.data(0, Qt.ItemDataRole.UserRole)
         if v is None:
             return
-        self.filter_selected.emit(int(v))
+        kind = v[0]
+        if kind == "dossier":
+            self.dossier_selected.emit(int(v[1]))
+        elif kind == "filter":
+            self.filter_selected.emit(int(v[1]), int(v[2]))
+
+    def _on_item_edited(self, item, _col: int) -> None:
+        if self._suppress_item_changed:
+            return
+        v = item.data(0, Qt.ItemDataRole.UserRole)
+        if v is None or v[0] != "dossier":
+            return
+        new_name = item.text(0).strip()
+        if not new_name:
+            # Restore previous name to avoid empty dossier labels.
+            didx = int(v[1])
+            self._suppress_item_changed = True
+            item.setText(0, self._dossiers[didx].name)
+            self._suppress_item_changed = False
+            return
+        self.dossier_renamed.emit(int(v[1]), new_name)
+
+    def _target_dossier_idx(self) -> int:
+        sel = self.current_selection()
+        if sel is None:
+            return -1
+        if sel[0] == "dossier":
+            return int(sel[1])
+        return int(sel[1])
+
+    def _on_add(self) -> None:
+        didx = self._target_dossier_idx()
+        if didx < 0:
+            return
+        self.filter_added.emit(didx)
 
     def _on_remove(self) -> None:
-        idx = self.current_index()
-        if idx >= 0:
-            self.filter_removed.emit(idx)
+        sel = self.current_selection()
+        if sel is None:
+            return
+        if sel[0] == "dossier":
+            self.dossier_removed.emit(int(sel[1]))
+        else:
+            self.filter_removed.emit(int(sel[1]), int(sel[2]))
 
     def _move(self, delta: int) -> None:
-        idx = self.current_index()
-        new = idx + delta
-        if idx < 0 or new < 0 or new >= len(self._filters):
+        sel = self.current_selection()
+        if sel is None or sel[0] != "filter":
             return
-        self.filter_moved.emit(idx, new)
+        didx, fidx = int(sel[1]), int(sel[2])
+        new = fidx + delta
+        if didx >= len(self._dossiers):
+            return
+        if new < 0 or new >= len(self._dossiers[didx].filters):
+            return
+        self.filter_moved.emit(didx, fidx, new)
 
     def _on_search_changed(self, text: str) -> None:
         query = text.strip().lower()
-        root = self._tree.topLevelItem(0)
-        if root is None:
-            return
-        for i in range(root.childCount()):
-            child = root.child(i)
-            hidden = bool(query) and query not in child.text(0).lower()
-            child.setHidden(hidden)
+        for di in range(self._tree.topLevelItemCount()):
+            root = self._tree.topLevelItem(di)
+            if root is None:
+                continue
+            any_visible = False
+            for ci in range(root.childCount()):
+                child = root.child(ci)
+                hidden = bool(query) and query not in child.text(0).lower()
+                child.setHidden(hidden)
+                if not hidden:
+                    any_visible = True
+            root.setHidden(bool(query) and not any_visible)
