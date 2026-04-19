@@ -72,6 +72,23 @@ ROLL_MAX_5: dict[str, int] = {
     "DC": 5, "RES": 7, "PRE": 7, "ATQ": 15, "DEF": 15, "PV": 300,
 }
 
+# Min roll par stat (source Spokland data-mining, cross-verif SWOP).
+ROLL_MIN_6: dict[str, int] = {
+    "ATQ%": 5, "DEF%": 5, "PV%": 5, "VIT": 4, "CC": 4,
+    "DC": 4, "RES": 4, "PRE": 4, "ATQ": 10, "DEF": 10, "PV": 135,
+}
+
+# 5★ min approximé depuis 6★ ; à affiner si besoin.
+ROLL_MIN_5: dict[str, int] = {
+    "ATQ%": 4, "DEF%": 4, "PV%": 4, "VIT": 3, "CC": 3,
+    "DC": 3, "RES": 4, "PRE": 4, "ATQ": 8, "DEF": 8, "PV": 108,
+}
+
+# Nombre de subs présents à +0 selon la rareté (Hero a 3 subs, 4e apparaît à +12).
+ORIG_SUBS_BY_RARITY: dict[str, int] = {
+    "Normal": 0, "Magique": 1, "Rare": 2, "Heroique": 3, "Legendaire": 4,
+}
+
 # Max grind par stat selon grade de meule (0=aucune, 1=Magique, 2=Rare,
 # 3=Heroique, 4=Legendaire). CC/DC/PRE/RES = 0 (non grindables).
 # Valeurs in-game confirmees par user 2026-04-18 (le bot original n'exposait

@@ -6,8 +6,11 @@ from dataclasses import dataclass
 from models import (
     GEM_MAX,
     GRIND_MAX,
+    ORIG_SUBS_BY_RARITY,
     ROLL_MAX_5,
     ROLL_MAX_6,
+    ROLL_MIN_5,
+    ROLL_MIN_6,
     Rune,
     SubStat,
 )
@@ -22,6 +25,27 @@ _ALL_SUB_STATS: list[str] = [
 def _max_roll(stat: str, stars: int) -> int:
     table = ROLL_MAX_6 if stars >= 6 else ROLL_MAX_5
     return table.get(stat, 0)
+
+
+def _min_roll(stat: str, stars: int) -> int:
+    table = ROLL_MIN_6 if stars >= 6 else ROLL_MIN_5
+    return table.get(stat, 0)
+
+
+def _mid_roll(stat: str, stars: int) -> int:
+    """Valeur moyenne d'un roll (= (min+max)//2). Évite d'énumérer toutes
+    les valeurs possibles entre min et max."""
+    return (_min_roll(stat, stars) + _max_roll(stat, stars)) // 2
+
+
+def _roll_value(stat: str, stars: int, mode: str) -> int:
+    """Valeur d'un roll selon le mode : 'max' (optimiste), 'mid' (moyen),
+    'min' (pessimiste)."""
+    if mode == "max":
+        return _max_roll(stat, stars)
+    if mode == "min":
+        return _min_roll(stat, stars)
+    return _mid_roll(stat, stars)
 
 
 def _rolls_remaining(rarity: str, level: int) -> int:
@@ -79,9 +103,10 @@ def _rune_key(rune: Rune) -> tuple:
     return (rune.level, subs)
 
 
-def _add_missing_subs(rune: Rune) -> list[Rune]:
+def _add_missing_subs(rune: Rune, roll_mode: str = "mid") -> list[Rune]:
     """Étape 1: complète à 4 subs en testant toutes stats candidates.
-    Nouvelles subs ont valeur initiale = 1 × max_roll (multiplier=1, cf. bot)."""
+    Nouvelles subs apparaissent avec roll selon `roll_mode` — pas de roll
+    bonus à +12 pour ces subs (règle SW confirmée user 2026-04-19)."""
     missing = 4 - len(rune.substats)
     if missing <= 0:
         return [rune]
@@ -92,25 +117,33 @@ def _add_missing_subs(rune: Rune) -> list[Rune]:
             for stat in _candidate_stats(v):
                 new_v = copy.deepcopy(v)
                 new_v.substats.append(
-                    SubStat(type=stat, value=_max_roll(stat, new_v.stars))
+                    SubStat(type=stat, value=_roll_value(stat, new_v.stars, roll_mode))
                 )
                 nxt.append(new_v)
         variants = nxt
     return variants
 
 
-def _apply_power_up(rune: Rune, excluded: set[int] | None = None) -> list[Rune]:
-    """Étape 2: applique toutes les distributions de rolls de power-up sur les
-    subs éligibles. Doit être appelé APRÈS _add_missing_subs pour que le 4ème
-    sub participe aux rolls (sinon il reste figé à 1 × max_roll).
+def _apply_power_up(
+    rune: Rune,
+    original_sub_count: int,
+    excluded: set[int] | None = None,
+    roll_mode: str = "mid",
+) -> list[Rune]:
+    """Étape 2: distribue les rolls de power-up UNIQUEMENT sur les subs
+    originales (indices < original_sub_count). Les subs apparues plus tard
+    (ex: 4e sub d'une Hero à +12) ne reçoivent pas de roll — règle SW.
+
+    Chaque roll ajoute `1 × roll_value(stat, mode)` de la stat.
+    `roll_mode` : 'max' (optimiste, Smart Filter), 'mid' (moyen), 'min' (pire).
 
     `excluded` : indices de subs gemmés (valeur fixée par la gemme, ne reçoit
-    aucun roll — règle SW confirmée par user 2026-04-18)."""
+    aucun roll — règle SW confirmée user 2026-04-18)."""
     rolls = _rolls_remaining(rune.grade, rune.level)
     skip = excluded or set()
-    eligible = [i for i in range(len(rune.substats)) if i not in skip]
+    eligible = [i for i in range(original_sub_count) if i not in skip]
     variants: list[Rune] = []
-    if not eligible:
+    if not eligible or rolls == 0:
         v = copy.deepcopy(rune)
         v.level = 12
         return [v]
@@ -120,7 +153,7 @@ def _apply_power_up(rune: Rune, excluded: set[int] | None = None) -> list[Rune]:
         for k, idx in enumerate(eligible):
             if dist[k] > 0:
                 sub = v.substats[idx]
-                sub.value += dist[k] * _max_roll(sub.type, v.stars)
+                sub.value += dist[k] * _roll_value(sub.type, v.stars, roll_mode)
         variants.append(v)
     return variants
 
@@ -178,24 +211,33 @@ def project_to_plus12(
     rune: Rune,
     grind_grade: int = 0,
     gem_grade: int = 0,
+    roll_mode: str = "mid",
 ) -> list[Rune]:
-    """Reproduit le pipeline du bot (-.18.cs lignes 1192-1694) :
+    """Pipeline de projection +12 avec mécanique SW stricte :
 
-    1. Ajoute les subs manquantes (toutes stats candidates, valeur = 1 max roll).
-    2. Branche sans gemme : power-up distribue les rolls sur les 4 subs.
-    3. Branche avec gemme : pour chaque slot × stat gemmable, pose la gemme
-       AVANT le power-up et exclut ce slot des rolls (règle SW).
-    4. Meule : ajoute grind_max à chaque sub grindable (in place).
+    1. Apparition des subs manquantes (4 - subs actuelles) à `roll_mode`.
+    2. Power-up : rolls distribués UNIQUEMENT sur les subs originales
+       (selon rareté : Legend=4, Hero=3, Rare=2, Magique=1, Normal=0).
+       Chaque roll vaut `roll_value(stat, mode)`.
+    3. Gemme (optionnelle) : pour chaque slot × stat gemmable, fixe la valeur
+       et exclut ce slot des rolls.
+    4. Meule (optionnelle) : ajoute grind_max à chaque sub grindable.
     5. Dédup.
 
-    Retourne la liste de toutes les variantes possibles à +12.
+    `roll_mode` :
+    - `'max'` : rolls au maximum — pour `match_filter_smart` (potentiel).
+    - `'mid'` : rolls à la moyenne — pour affichage UI (projection attendue).
+    - `'min'` : rolls au minimum — pour analyse pire cas.
     """
-    completed = _add_missing_subs(rune)
+    original_sub_count = ORIG_SUBS_BY_RARITY.get(rune.grade, len(rune.substats))
+    completed = _add_missing_subs(rune, roll_mode=roll_mode)
     all_variants: list[Rune] = []
     for v in completed:
-        all_variants.extend(_apply_power_up(v))
+        all_variants.extend(_apply_power_up(v, original_sub_count, roll_mode=roll_mode))
         for gemmed, idx in _gem_variants(v, gem_grade):
-            all_variants.extend(_apply_power_up(gemmed, excluded={idx}))
+            all_variants.extend(
+                _apply_power_up(gemmed, original_sub_count, excluded={idx}, roll_mode=roll_mode)
+            )
     grinded = _apply_grind(all_variants, grind_grade)
     return _dedup(grinded)
 
@@ -222,8 +264,12 @@ def simulate_powerup(
     gem_grade: int = 0,
     filters=None,
     global_settings: dict | None = None,
+    roll_mode: str = "mid",
 ) -> SimulationOutput:
     """Génère toutes les variantes +12 et agrège best/worst par efficiency.
+
+    `roll_mode` = 'mid' par défaut (projection moyenne pour affichage UI).
+    Utiliser 'max' pour potentiel théorique, 'min' pour pire cas.
 
     Si `filters` est fourni, calcule `keep_rate` = % de variantes passant au
     moins un filtre (via `match_filter`).
@@ -231,7 +277,9 @@ def simulate_powerup(
     # Import tardif pour éviter cycle
     from s2us_filter import calculate_efficiency1, match_filter
 
-    variants = project_to_plus12(rune, grind_grade=grind_grade, gem_grade=gem_grade)
+    variants = project_to_plus12(
+        rune, grind_grade=grind_grade, gem_grade=gem_grade, roll_mode=roll_mode,
+    )
     if not variants:
         empty = SimResult(efficiency=0.0, substats=[])
         return SimulationOutput(best=empty, worst=empty, variant_count=0)
