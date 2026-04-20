@@ -80,8 +80,9 @@ class MainWindow(QMainWindow):
         # Index 1 : Filtres
         self.filtres_page = FiltresPage()
         self._stack.addWidget(self.filtres_page)
-        # Index 2 : Runes
+        # Index 2 : Runes (branchée à la page Filtres pour le modal "Améliorer")
         self.runes_page = RunesPage()
+        self.runes_page.set_filters_source(self.filtres_page)
         self._stack.addWidget(self.runes_page)
         # Index 3 : Monstres
         self.monsters_page = MonstersPage()

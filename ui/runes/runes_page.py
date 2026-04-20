@@ -1,43 +1,55 @@
-"""Runes page — inventory browser (design_handoff_runes).
+"""Page Runes — gestionnaire d'inventaire visuel.
 
-Layout (top→bottom, inside main content column):
-    Header        (eyebrow "INVENTAIRE" + title "Runes" + live counters)
-    Toolbar       (set dropdown + slot/grade/rarity pills + level slider + equipped pills)
-    Body split    (table card in the middle | RuneDetailPanel 320px fixed on the right)
+Layout :
+    Header          (eyebrow "INVENTAIRE" + titre "Gestionnaire de Runes")
+    RuneFilterBar   (recherche + combos + slots + tri)
+    RuneGridView    (FlowLayout paginé de RuneCardWidget)
 
-The CTA in the side panel opens SimuEquipModal; candidates are placeholder
-until the backend is wired.
+Actions :
+    upgrade_clicked → RuneTesterModal(filters=filtres_page.current_filters())
+                                        .set_rune(rune).exec()
+    lock_toggled    → toggle volatile dans `self._locked_ids` (non persisté)
+    edit_clicked    → non implémenté pour l'instant (bouton désactivé)
 
-Public API preserved: `apply_profile(profile, saved_at)`.
+API publique préservée pour `main_window` :
+    runes_page.apply_profile(profile, saved_at)
+    runes_page.set_filters_source(filtres_page)  # nouveau
 """
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from models import Rune
+from s2us_filter import calculate_efficiency_s2us
 from ui import theme
-from ui.runes.rune_detail_panel import RuneDetailPanel
+from ui.filtres.rune_tester_modal import RuneTesterModal
 from ui.runes.rune_filter_bar import RuneFilterBar
-from ui.runes.rune_simu_modal import SimuCandidate, SimuEquipModal
-from ui.runes.rune_table import RuneTable
+from ui.runes.rune_grid_view import RuneGridView
+
+
+def _eff(rune: Rune) -> float:
+    if rune.swex_efficiency is not None:
+        return float(rune.swex_efficiency)
+    try:
+        return float(calculate_efficiency_s2us(rune))
+    except Exception:
+        return 0.0
 
 
 class RunesPage(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setStyleSheet(
-            f"RunesPage {{ background: transparent; color:{theme.D.FG}; }}"
+            f"RunesPage {{ background: transparent; color: {theme.D.FG}; }}"
         )
 
-        # ── State ────────────────────────────────────────────────
         self._all_runes: list[Rune] = []
         self._equipped_index: dict = {}
-        self._monsters: list = []
-        self._selected: Rune | None = None
-        self._simu_modal: SimuEquipModal | None = None
+        self._locked_ids: set = set()
+        self._filters_source = None
+        self._tester_modal: RuneTesterModal | None = None
 
-        # ── Layout skeleton ──────────────────────────────────────
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
@@ -48,23 +60,13 @@ class RunesPage(QWidget):
         self._filter_bar.changed.connect(self._refilter)
         outer.addWidget(self._filter_bar)
 
-        # Body split
-        body = QWidget()
-        body_lay = QHBoxLayout(body)
-        body_lay.setContentsMargins(28, 0, 28, 20)
-        body_lay.setSpacing(16)
+        self._grid = RuneGridView()
+        self._grid.upgrade_clicked.connect(self._open_tester)
+        self._grid.lock_toggled.connect(self._toggle_lock)
+        self._grid.edit_clicked.connect(self._on_edit)
+        outer.addWidget(self._grid, 1)
 
-        self._table = RuneTable()
-        self._table.rune_selected.connect(self._on_rune_selected)
-        body_lay.addWidget(self._table, 1)
-
-        self._detail = RuneDetailPanel()
-        self._detail.simulate_clicked.connect(self._open_simu_modal)
-        body_lay.addWidget(self._detail, 0)
-
-        outer.addWidget(body, 1)
-
-    # ── Header build ──────────────────────────────────────────────
+    # ── Header ────────────────────────────────────────────────────────
     def _build_header(self) -> QWidget:
         header = QWidget()
         lay = QVBoxLayout(header)
@@ -78,40 +80,31 @@ class RunesPage(QWidget):
         )
         lay.addWidget(eyebrow)
 
-        row = QHBoxLayout()
-        row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(14)
-
-        title = QLabel("Runes")
+        title = QLabel("Gestionnaire de Runes")
         title.setStyleSheet(
             f"color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';"
             f"font-size:24px; font-weight:600; letter-spacing:-0.5px;"
         )
-        row.addWidget(title, 0, Qt.AlignmentFlag.AlignBottom)
-
-        self._counter = QLabel("")
-        self._counter.setTextFormat(Qt.TextFormat.RichText)
-        self._counter.setStyleSheet(
-            f"color:{theme.D.FG_DIM}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:12.5px;"
-        )
-        row.addWidget(self._counter, 0, Qt.AlignmentFlag.AlignBottom)
-        row.addStretch(1)
-
-        row_wrap = QWidget()
-        row_wrap.setLayout(row)
-        lay.addWidget(row_wrap)
+        title.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        lay.addWidget(title)
         return header
 
-    # ── Public API ────────────────────────────────────────────────
+    # ── Public API ────────────────────────────────────────────────────
+    def set_filters_source(self, filters_page) -> None:
+        """Branche la page Filtres pour que le modal `Améliorer` connaisse
+        les filtres utilisateur. Le duck-typing sur `current_filters()` est
+        suffisant (evite un import circulaire)."""
+        self._filters_source = filters_page
+
     def apply_profile(self, profile: dict, saved_at) -> None:
         self._all_runes = list(profile.get("runes", []))
-        self._monsters = list(profile.get("monsters", []))
         self._equipped_index = {}
-        for monster in self._monsters:
+        for monster in profile.get("monsters", []):
             for rune in getattr(monster, "equipped_runes", []):
                 key = rune.rune_id if rune.rune_id is not None else id(rune)
                 self._equipped_index[key] = monster.name
+
+        self._locked_ids.clear()
 
         sets_present = sorted({r.set for r in self._all_runes})
         self._filter_bar.blockSignals(True)
@@ -119,110 +112,80 @@ class RunesPage(QWidget):
         self._filter_bar.reset_to_defaults()
         self._filter_bar.blockSignals(False)
 
-        self._selected = None
         self._refilter()
-        self._detail.clear()
 
-    # ── Filtering ─────────────────────────────────────────────────
+    # ── Filtering & sorting ───────────────────────────────────────────
     def _refilter(self) -> None:
         fb = self._filter_bar
-        set_filter = fb.filter_set()
-        slot_filter = fb.filter_slot()
-        stars_filter = fb.filter_stars()
-        rarity_filter = fb.filter_rarity()
+        set_f = fb.filter_set()
+        slot_f = fb.filter_slot()
+        rarity_f = fb.filter_rarity()
+        stars_f = fb.filter_stars()
         level_min = fb.filter_level_min()
-        equipped_mode = fb.filter_equipped()
+        main_f = fb.filter_main_stat()
+        search = fb.search_text()
 
         filtered: list[Rune] = []
         for r in self._all_runes:
-            if set_filter and r.set != set_filter:
+            if set_f and r.set != set_f:
                 continue
-            if slot_filter is not None and r.slot != slot_filter:
+            if slot_f is not None and r.slot != slot_f:
                 continue
-            if stars_filter is not None and r.stars != stars_filter:
+            if rarity_f and r.grade != rarity_f:
                 continue
-            if rarity_filter is not None and r.grade != rarity_filter:
+            if stars_f is not None and r.stars != stars_f:
                 continue
             if r.level < level_min:
                 continue
-            key = r.rune_id if r.rune_id is not None else id(r)
-            is_equipped = key in self._equipped_index
-            if equipped_mode == "equipped" and not is_equipped:
+            if main_f and (r.main_stat is None or r.main_stat.type != main_f):
                 continue
-            if equipped_mode == "free" and is_equipped:
-                continue
+            if search:
+                key = r.rune_id if r.rune_id is not None else id(r)
+                equipped_on = self._equipped_index.get(key, "")
+                blob = f"{r.set} {equipped_on}".lower()
+                if search not in blob:
+                    continue
             filtered.append(r)
 
-        self._table.set_runes(filtered, self._equipped_index)
-        self._update_counter(len(filtered))
-
-        # Keep current selection if still visible, otherwise pick first.
-        if self._selected is None or self._selected not in filtered:
-            self._selected = filtered[0] if filtered else None
-        if self._selected is not None:
-            self._table.set_selected_rune(self._selected)
-            key = self._selected.rune_id if self._selected.rune_id is not None else id(self._selected)
-            self._detail.set_rune(self._selected, self._equipped_index.get(key))
+        if fb.sort_key() == "level":
+            filtered.sort(key=lambda r: (r.level, _eff(r)), reverse=True)
         else:
-            self._detail.clear()
+            filtered.sort(key=lambda r: _eff(r), reverse=True)
 
-    def _update_counter(self, shown: int) -> None:
-        total = len(self._all_runes)
-        plus15 = sum(1 for r in self._all_runes if r.level >= 15)
-        free = sum(
-            1 for r in self._all_runes
-            if (r.rune_id if r.rune_id is not None else id(r)) not in self._equipped_index
-        )
-        mono = theme.D.FONT_MONO
-        fg = theme.D.FG
-        mute = theme.D.FG_MUTE
-        self._counter.setText(
-            f"<span style='color:{fg}; font-family:\"{mono}\";'>{shown}</span>"
-            f" <span style='color:{mute};'>sur {total}</span>"
-            f" <span style='color:{mute};'>·</span> "
-            f"<span style='color:{fg}; font-family:\"{mono}\";'>{plus15}</span> +15 "
-            f"<span style='color:{mute};'>·</span> "
-            f"<span style='color:{fg}; font-family:\"{mono}\";'>{free}</span> libres"
+        self._grid.set_runes(
+            filtered, self._equipped_index, self._locked_ids,
+            total_in_profile=len(self._all_runes),
         )
 
-    # ── Selection ─────────────────────────────────────────────────
-    def _on_rune_selected(self, rune: Rune) -> None:
-        self._selected = rune
+    # ── Actions ───────────────────────────────────────────────────────
+    def _open_tester(self, rune: Rune) -> None:
+        filters = []
+        if self._filters_source is not None and hasattr(
+            self._filters_source, "current_filters"
+        ):
+            try:
+                filters = list(self._filters_source.current_filters())
+            except Exception:
+                filters = []
+
+        # Un modal neuf par ouverture : set_rune() pré-remplit l'état,
+        # puis RuneTesterModal gère tout le cycle de vie (cache tied, etc.).
+        modal = RuneTesterModal(filters=filters, parent=self.window())
+        modal.set_rune(rune)
+        modal.exec()
+
+    def _toggle_lock(self, rune: Rune) -> None:
         key = rune.rune_id if rune.rune_id is not None else id(rune)
-        self._detail.set_rune(rune, self._equipped_index.get(key))
+        if key in self._locked_ids:
+            self._locked_ids.discard(key)
+        else:
+            self._locked_ids.add(key)
 
-    # ── Simulation ────────────────────────────────────────────────
-    def _open_simu_modal(self, rune: Rune) -> None:
-        if self._simu_modal is None:
-            self._simu_modal = SimuEquipModal(self.window())
-            self._simu_modal.equip_confirmed.connect(self._on_equip_confirmed)
-        candidates = self._build_candidates(rune)
-        self._simu_modal.load(rune, candidates)
-        self._simu_modal.resize(self.window().size() if self.window() else self.size())
-        self._simu_modal.exec()
-
-    def _build_candidates(self, rune: Rune) -> list[SimuCandidate]:
-        """Placeholder candidates until a real compatibility/eff engine is wired.
-
-        Picks up to five monsters from the profile and fakes a delta around the
-        rune's efficiency. The UI should render correctly once a real scorer
-        replaces this function.
-        """
-        out: list[SimuCandidate] = []
-        base = rune.swex_efficiency if rune.swex_efficiency is not None else 70.0
-        for i, mon in enumerate(self._monsters[:5]):
-            current = 55.0 + i * 4.0
-            delta = (3.5 + i * 1.3) * (1 if i % 2 == 0 else -1)
-            out.append(SimuCandidate(
-                name=mon.name,
-                stars=int(getattr(mon, "stars", 6)),
-                level=int(getattr(mon, "level", 40)),
-                current_eff=current,
-                delta=delta,
-            ))
-        return out
-
-    def _on_equip_confirmed(self, candidate: SimuCandidate) -> None:
-        # Backend hook — the actual move/persist lives elsewhere. For now the
-        # modal closes itself and the page leaves state untouched.
+    def _on_edit(self, rune: Rune) -> None:
+        # Placeholder : bouton désactivé dans la carte, ce slot est inerte.
         return
+
+    # ── Accessors (utile aux tests) ───────────────────────────────────
+    @property
+    def locked_ids(self) -> set:
+        return self._locked_ids

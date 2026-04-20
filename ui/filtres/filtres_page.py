@@ -227,9 +227,16 @@ class FiltresPage(QWidget):
         except OSError:
             pass
 
+    def current_filters(self) -> list[S2USFilter]:
+        """Tous les filtres de tous les dossiers à plat.
+
+        Utilisé par la page Runes pour alimenter le modal RuneTesterModal
+        quand l'utilisateur clique sur "Améliorer" depuis une rune-carte.
+        """
+        return [f for d in self._dossiers for f in d.filters]
+
     def _on_test(self) -> None:
-        all_filters = [f for d in self._dossiers for f in d.filters]
-        dlg = RuneTesterModal(filters=all_filters, parent=self)
+        dlg = RuneTesterModal(filters=self.current_filters(), parent=self)
         dlg.exec()
 
 

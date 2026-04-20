@@ -22,11 +22,11 @@ def test_page_instantiates(qapp):
     assert p is not None
 
 
-def test_apply_profile_populates_table(qapp):
+def test_apply_profile_populates_grid(qapp):
     p = RunesPage()
     runes = [_r(1), _r(2, slot=3)]
     p.apply_profile({"runes": runes, "monsters": []}, saved_at=0.0)
-    assert p._table._model.rowCount() == 2
+    assert len(p._grid._runes) == 2
 
 
 def test_apply_profile_builds_equipped_index(qapp):
@@ -37,19 +37,13 @@ def test_apply_profile_builds_equipped_index(qapp):
     assert p._equipped_index.get(42) == "Lushen"
 
 
-def test_apply_profile_resets_filter_defaults(qapp):
+def test_apply_profile_resets_filters(qapp):
     p = RunesPage()
-    p._filter_bar._level_slider.setValue(12)
+    p._filter_bar._rarity_combo.setCurrentIndex(
+        p._filter_bar._rarity_combo.findData("Legendaire"),
+    )
     p.apply_profile({"runes": [], "monsters": []}, saved_at=0.0)
-    assert p._filter_bar.filter_level_min() == 0
-
-
-def test_selection_updates_detail_panel(qapp):
-    p = RunesPage()
-    r = _r(42)
-    p.apply_profile({"runes": [r], "monsters": []}, saved_at=0.0)
-    p._on_rune_selected(r)
-    assert p._detail._current is r
+    assert p._filter_bar.filter_rarity() is None
 
 
 def test_filter_by_slot(qapp):
@@ -59,7 +53,7 @@ def test_filter_by_slot(qapp):
         "monsters": [],
     }, saved_at=0.0)
     p._filter_bar._slot_btns[2].click()
-    assert p._table._model.rowCount() == 1
+    assert len(p._grid._runes) == 1
 
 
 def test_filter_by_rarity(qapp):
@@ -68,33 +62,67 @@ def test_filter_by_rarity(qapp):
         "runes": [_r(1, grade="Heroique"), _r(2, grade="Legendaire")],
         "monsters": [],
     }, saved_at=0.0)
-    p._filter_bar._rarity_btns["Legendaire"].click()
-    assert p._table._model.rowCount() == 1
+    idx = p._filter_bar._rarity_combo.findData("Legendaire")
+    p._filter_bar._rarity_combo.setCurrentIndex(idx)
+    assert len(p._grid._runes) == 1
 
 
-def test_level_slider_filters_low_levels(qapp):
+def test_level_combo_filters_low_levels(qapp):
     p = RunesPage()
     low = _r(1, level=3)
     high = _r(2, level=15)
     p.apply_profile({"runes": [low, high], "monsters": []}, saved_at=0.0)
-    p._filter_bar._level_slider.setValue(12)
-    assert p._table._model.rowCount() == 1
+    idx = p._filter_bar._level_combo.findData(12)
+    p._filter_bar._level_combo.setCurrentIndex(idx)
+    assert len(p._grid._runes) == 1
 
 
-def test_equipped_filter_keeps_only_equipped(qapp):
+def test_search_filters_by_set(qapp):
     p = RunesPage()
-    eq = _r(1)
-    free = _r(2)
-    mon = Monster(name="Lushen", element="Vent", stars=6, level=40, equipped_runes=[eq])
-    p.apply_profile({"runes": [eq, free], "monsters": [mon]}, saved_at=0.0)
-    p._filter_bar._equipped_btns["equipped"].click()
-    assert p._table._model.rowCount() == 1
+    p.apply_profile({
+        "runes": [_r(1, set_name="Violent"), _r(2, set_name="Rapide")],
+        "monsters": [],
+    }, saved_at=0.0)
+    p._filter_bar._search.setText("Viole")
+    assert len(p._grid._runes) == 1
+    assert p._grid._runes[0].set == "Violent"
 
 
-def test_new_profile_clears_detail(qapp):
+def test_sort_by_level_desc(qapp):
     p = RunesPage()
-    r = _r(1)
+    r_low = _r(1, level=6, eff=80.0)
+    r_high = _r(2, level=15, eff=50.0)
+    p.apply_profile({"runes": [r_low, r_high], "monsters": []}, saved_at=0.0)
+    p._filter_bar._rb_level.setChecked(True)
+    assert p._grid._runes[0].level == 15
+
+
+def test_sort_by_score_desc(qapp):
+    p = RunesPage()
+    r_low = _r(1, eff=40.0)
+    r_high = _r(2, eff=95.0)
+    p.apply_profile({"runes": [r_low, r_high], "monsters": []}, saved_at=0.0)
+    # Score est le défaut
+    assert p._grid._runes[0].rune_id == 2
+
+
+def test_toggle_lock_updates_locked_ids(qapp):
+    p = RunesPage()
+    r = _r(7)
     p.apply_profile({"runes": [r], "monsters": []}, saved_at=0.0)
-    p._on_rune_selected(r)
-    p.apply_profile({"runes": [], "monsters": []}, saved_at=0.0)
-    assert p._detail._current is None
+    p._toggle_lock(r)
+    assert 7 in p.locked_ids
+    p._toggle_lock(r)
+    assert 7 not in p.locked_ids
+
+
+def test_set_filters_source_stores_reference(qapp):
+    p = RunesPage()
+
+    class _Stub:
+        def current_filters(self):
+            return ["a", "b"]
+
+    stub = _Stub()
+    p.set_filters_source(stub)
+    assert p._filters_source is stub

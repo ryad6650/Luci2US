@@ -1,203 +1,277 @@
-"""Runes page toolbar — set select + slot/grade/rarity/equipped pills + level slider.
+"""Barre de filtres pour la page Runes — recherche texte + combos + slots.
 
-Maps the design_handoff_runes toolbar onto the French-named Rune model:
-    - "Grade" pills  → filter on Rune.stars (5 or 6)
-    - "Rareté" pills → filter on Rune.grade ("Legendaire" / "Heroique")
-    - "Level" slider → Rune.level minimum
+Contrôles (maquette "Rune page.png") :
+  - QLineEdit de recherche (matche sur `rune.set` + nom du monstre équipé).
+  - QComboBox "Type" (dynamique — sets présents dans le profil).
+  - Pills "Emplacement" 1-6 (toggle : re-click sur actif → déselection).
+  - QComboBox "Rareté" (Legendaire / Heroique / Rare / Magique / Normal).
+  - QComboBox "Étoiles" (6★ / 5★).
+  - QComboBox "Amélioration" (+0 / +3 / +6 / +9 / +12 / +15 — seuil minimum).
+  - QComboBox "Stat Principale" (ATQ, ATQ%, DEF, DEF%, PV, PV%, VIT, CC, DC, RES, PRE).
+  - Groupe radio "Tri" (Niveau+Élevé | Score).
 
-Emits `changed()` on every control change; the page re-runs its filter pass.
+Toute modification émet `changed()` ; la page parente re-filtre.
 """
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QWidget,
+    QButtonGroup, QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QPushButton, QRadioButton, QVBoxLayout, QWidget,
 )
 
+from models import STATS_FR
 from ui import theme
 
 
-# ── Pills (segmented control) ────────────────────────────────────────────
-class PillButton(QPushButton):
-    """Compact rounded-pill toggle used in segmented-control groups.
+_RARITIES = [("Tous", None), ("Légendaire", "Legendaire"), ("Héroïque", "Heroique"),
+             ("Rare", "Rare"), ("Magique", "Magique"), ("Normal", "Normal")]
+_STARS = [("Toutes", None), ("6★", 6), ("5★", 5), ("4★", 4), ("3★", 3), ("2★", 2), ("1★", 1)]
+_LEVELS = [("Tous", 0), ("+0", 0), ("+3", 3), ("+6", 6), ("+9", 9), ("+12", 12), ("+15", 15)]
 
-    A pill can accept a custom `color` that overrides the default magenta
-    accent when it's active — used for the Rareté pills (gold/blue).
-    """
 
-    def __init__(
-        self, key, label: str, color: str | None = None,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(label, parent)
+_COMBO_QSS = f"""
+QComboBox {{
+    background: rgba(255,255,255,0.04);
+    color: {theme.D.FG};
+    border: 1px solid {theme.D.BORDER};
+    border-radius: 8px;
+    padding: 4px 24px 4px 10px;
+    min-height: 22px;
+    font-family: '{theme.D.FONT_UI}';
+    font-size: 12px; font-weight: 600;
+}}
+QComboBox:hover {{ border: 1px solid {theme.D.ACCENT}aa; }}
+QComboBox::drop-down {{ border: none; width: 18px; }}
+QComboBox QAbstractItemView {{
+    background: #1a1d24;
+    color: {theme.D.FG};
+    border: 1px solid {theme.D.BORDER_STR};
+    selection-background-color: {theme.D.ACCENT_DIM};
+    selection-color: {theme.D.ACCENT};
+    outline: 0;
+}}
+"""
+
+
+class _SlotPill(QPushButton):
+    """Pill 1-6 pour le filtre slot."""
+
+    def __init__(self, label: str, key: int | None) -> None:
+        super().__init__(label)
         self.key = key
-        self._color = color
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setCheckable(True)
-        self.setFixedHeight(24)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedSize(28, 24)
         self._apply(False)
 
-    def set_active(self, active: bool) -> None:
-        self.setChecked(active)
-        self._apply(active)
+    def set_active(self, on: bool) -> None:
+        self.setChecked(on)
+        self._apply(on)
 
-    def _apply(self, active: bool) -> None:
-        if active:
-            if self._color:
-                bg = f"{self._color}22"
-                fg = self._color
-            else:
-                bg = theme.D.ACCENT_DIM
-                fg = theme.D.ACCENT
+    def _apply(self, on: bool) -> None:
+        if on:
+            bg, fg, border = theme.D.ACCENT_DIM, theme.D.ACCENT, theme.D.ACCENT
         else:
-            bg = "transparent"
-            fg = theme.D.FG_MUTE
+            bg, fg, border = "transparent", theme.D.FG_DIM, theme.D.BORDER_STR
         self.setStyleSheet(
             f"""
             QPushButton {{
-                background:{bg}; color:{fg};
-                border:none; border-radius:999px;
-                padding:0 11px;
-                font-family:'{theme.D.FONT_UI}';
-                font-size:11px; font-weight:600;
+                background: {bg}; color: {fg};
+                border: 1px solid {border}; border-radius: 12px;
+                font-family: '{theme.D.FONT_UI}';
+                font-size: 11px; font-weight: 700;
             }}
-            QPushButton:hover {{ color:{fg if active else theme.D.FG_DIM}; }}
+            QPushButton:hover {{ color: {theme.D.FG}; }}
             """
         )
 
 
-class PillGroup(QFrame):
-    """Rounded pill container — solid rgba background + 1px border."""
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setObjectName("PillGroup")
-        self.setStyleSheet(
-            f"""
-            #PillGroup {{
-                background: rgba(255,255,255,0.03);
-                border: 1px solid {theme.D.BORDER};
-                border-radius: 999px;
-            }}
-            """
-        )
-        self._lay = QHBoxLayout(self)
-        self._lay.setContentsMargins(3, 3, 3, 3)
-        self._lay.setSpacing(2)
-
-    def add(self, widget: QPushButton) -> None:
-        self._lay.addWidget(widget)
-
-
-# ── Toolbar ──────────────────────────────────────────────────────────────
 class RuneFilterBar(QWidget):
     changed = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        # ── state ────────────────────────────────────────────────
         self._filter_set: str | None = None
         self._filter_slot: int | None = None
-        self._filter_stars: int | None = None          # 5 | 6 | None
-        self._filter_rarity: str | None = None         # "Legendaire" | "Heroique" | None
+        self._filter_rarity: str | None = None
+        self._filter_stars: int | None = None
         self._filter_level_min: int = 0
-        self._filter_equipped: str = "all"             # "all" | "equipped" | "free"
+        self._filter_main_stat: str | None = None
+        self._filter_search: str = ""
+        self._sort_key: str = "score"
 
-        # ── layout ──────────────────────────────────────────────
-        lay = QHBoxLayout(self)
-        lay.setContentsMargins(28, 0, 28, 14)
-        lay.setSpacing(8)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(28, 14, 28, 14)
+        outer.setSpacing(8)
 
-        # Set dropdown
-        self._set_combo = QComboBox()
-        self._set_combo.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._set_combo.setStyleSheet(
+        # Row 1 : recherche
+        search_row = QHBoxLayout()
+        search_row.setContentsMargins(0, 0, 0, 0)
+        search_row.setSpacing(8)
+        lbl_search = QLabel("Barre de Recherche")
+        lbl_search.setStyleSheet(
+            f"color:{theme.D.ACCENT}; font-family:'{theme.D.FONT_UI}';"
+            f"font-size:10px; font-weight:700; letter-spacing:0.8px;"
+        )
+        lbl_search.setFixedWidth(150)
+        search_row.addWidget(lbl_search)
+        self._search = QLineEdit()
+        self._search.setPlaceholderText("Rechercher des Runes...")
+        self._search.setClearButtonEnabled(True)
+        self._search.setStyleSheet(
             f"""
-            QComboBox {{
-                background: rgba(255,255,255,0.03);
-                border: 1px solid {theme.D.BORDER};
-                border-radius: 999px;
-                color: {theme.D.FG};
-                font-family:'{theme.D.FONT_UI}'; font-size:12px; font-weight:600;
-                padding: 4px 28px 4px 12px;
-                min-height: 20px;
-            }}
-            QComboBox::drop-down {{ border:none; width: 18px; }}
-            QComboBox QAbstractItemView {{
-                background: #1a0f14;
+            QLineEdit {{
+                background: rgba(255,255,255,0.04);
                 color: {theme.D.FG};
                 border: 1px solid {theme.D.BORDER};
-                selection-background-color: {theme.D.ACCENT_DIM};
-                selection-color: {theme.D.ACCENT};
-                outline: 0;
+                border-radius: 8px; padding: 5px 10px;
+                font-family: '{theme.D.FONT_UI}'; font-size: 12px;
             }}
+            QLineEdit:focus {{ border: 1px solid {theme.D.ACCENT}aa; }}
             """
         )
-        self._set_combo.addItem("Tous les sets", userData=None)
+        self._search.textChanged.connect(self._on_search_changed)
+        search_row.addWidget(self._search, 1)
+        outer.addLayout(search_row)
+
+        # Row 2 : filtres principaux
+        row_a = QHBoxLayout()
+        row_a.setContentsMargins(0, 0, 0, 0)
+        row_a.setSpacing(14)
+
+        self._set_combo = self._make_combo([("Tous les sets", None)])
         self._set_combo.currentIndexChanged.connect(self._on_set_changed)
-        lay.addWidget(self._set_combo)
+        row_a.addLayout(self._labeled("Type", self._set_combo))
 
-        # Slot pills
-        self._slot_group = PillGroup()
-        self._slot_btns: dict[object, PillButton] = {}
-        self._add_pill(self._slot_group, self._slot_btns, None, "Slot", self._set_slot, active=True)
+        slot_wrap = QFrame()
+        slot_wrap.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        slot_lay = QHBoxLayout(slot_wrap)
+        slot_lay.setContentsMargins(0, 0, 0, 0)
+        slot_lay.setSpacing(4)
+        self._slot_btns: dict[int, _SlotPill] = {}
         for n in range(1, 7):
-            self._add_pill(self._slot_group, self._slot_btns, n, str(n), self._set_slot)
-        lay.addWidget(self._slot_group)
+            pill = _SlotPill(str(n), n)
+            pill.clicked.connect(lambda _c=False, k=n: self._set_slot(k))
+            slot_lay.addWidget(pill)
+            self._slot_btns[n] = pill
+        row_a.addLayout(self._labeled("Emplacement", slot_wrap))
 
-        # Grade pills (stars filter in the model)
-        self._grade_group = PillGroup()
-        self._grade_btns: dict[object, PillButton] = {}
-        self._add_pill(self._grade_group, self._grade_btns, None, "Tous", self._set_stars, active=True)
-        self._add_pill(self._grade_group, self._grade_btns, 6, "6★", self._set_stars)
-        self._add_pill(self._grade_group, self._grade_btns, 5, "5★", self._set_stars)
-        lay.addWidget(self._grade_group)
+        self._rarity_combo = self._make_combo(_RARITIES)
+        self._rarity_combo.currentIndexChanged.connect(self._on_rarity_changed)
+        row_a.addLayout(self._labeled("Rareté", self._rarity_combo))
 
-        # Rarity pills (Rune.grade in the model)
-        self._rarity_group = PillGroup()
-        self._rarity_btns: dict[object, PillButton] = {}
-        self._add_pill(self._rarity_group, self._rarity_btns, None, "Tous", self._set_rarity, active=True)
-        self._add_pill(self._rarity_group, self._rarity_btns, "Legendaire", "Légende", self._set_rarity, color="#f5c16e")
-        self._add_pill(self._rarity_group, self._rarity_btns, "Heroique", "Héros", self._set_rarity, color="#7ba6ff")
-        lay.addWidget(self._rarity_group)
+        self._stars_combo = self._make_combo(_STARS)
+        self._stars_combo.currentIndexChanged.connect(self._on_stars_changed)
+        row_a.addLayout(self._labeled("Étoiles", self._stars_combo))
 
-        # Level slider pill
-        lay.addWidget(self._build_level_slider())
+        row_a.addStretch(1)
+        outer.addLayout(row_a)
 
-        # Equipped pills
-        self._equipped_group = PillGroup()
-        self._equipped_btns: dict[object, PillButton] = {}
-        for key, label in (("all", "Toutes"), ("equipped", "Équipées"), ("free", "Libres")):
-            self._add_pill(
-                self._equipped_group, self._equipped_btns, key, label, self._set_equipped,
-                active=(key == "all"),
-            )
-        lay.addWidget(self._equipped_group)
+        # Row 3 : amélioration + main stat + tri
+        row_b = QHBoxLayout()
+        row_b.setContentsMargins(0, 0, 0, 0)
+        row_b.setSpacing(14)
 
-        lay.addStretch(1)
+        self._level_combo = self._make_combo(_LEVELS)
+        self._level_combo.currentIndexChanged.connect(self._on_level_changed)
+        row_b.addLayout(self._labeled("Amélioration", self._level_combo))
 
-    # ── public API ──────────────────────────────────────────────────
+        self._main_combo = self._make_combo(
+            [("Toutes", None)] + [(s, s) for s in STATS_FR]
+        )
+        self._main_combo.currentIndexChanged.connect(self._on_main_changed)
+        row_b.addLayout(self._labeled("Stats Principales", self._main_combo))
+
+        row_b.addStretch(1)
+
+        sort_wrap = QFrame()
+        sort_wrap.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        sort_lay = QHBoxLayout(sort_wrap)
+        sort_lay.setContentsMargins(0, 0, 0, 0)
+        sort_lay.setSpacing(12)
+
+        self._sort_group = QButtonGroup(self)
+        self._sort_group.setExclusive(True)
+        radio_qss = f"""
+            QRadioButton {{ color:{theme.D.FG_DIM};
+                background: transparent; spacing: 6px;
+                font-family:'{theme.D.FONT_UI}'; font-size: 11px; font-weight: 600; }}
+            QRadioButton::indicator {{
+                width: 12px; height: 12px;
+                border: 1.5px solid {theme.D.BORDER_STR};
+                background: transparent; border-radius: 6px; }}
+            QRadioButton::indicator:checked {{
+                background: {theme.D.ACCENT};
+                border: 1.5px solid {theme.D.ACCENT}; }}
+            QRadioButton:hover {{ color: {theme.D.FG}; }}
+        """
+        self._rb_level = QRadioButton("Niveau + Élevé")
+        self._rb_level.setStyleSheet(radio_qss)
+        self._rb_score = QRadioButton("Score")
+        self._rb_score.setStyleSheet(radio_qss)
+        self._rb_score.setChecked(True)
+        self._sort_group.addButton(self._rb_level)
+        self._sort_group.addButton(self._rb_score)
+        self._rb_level.toggled.connect(self._on_sort_changed)
+        self._rb_score.toggled.connect(self._on_sort_changed)
+        sort_lay.addWidget(self._rb_level)
+        sort_lay.addWidget(self._rb_score)
+        row_b.addLayout(self._labeled("Tri", sort_wrap))
+
+        outer.addLayout(row_b)
+
+    # ── Helpers de construction ───────────────────────────────────────
+    def _make_combo(self, items: list[tuple[str, object]]) -> QComboBox:
+        cb = QComboBox()
+        cb.setCursor(Qt.CursorShape.PointingHandCursor)
+        cb.setMinimumWidth(130)
+        for label, key in items:
+            cb.addItem(label, userData=key)
+        cb.setStyleSheet(_COMBO_QSS)
+        return cb
+
+    def _labeled(self, label: str, widget: QWidget) -> QVBoxLayout:
+        col = QVBoxLayout()
+        col.setContentsMargins(0, 0, 0, 0)
+        col.setSpacing(3)
+        lbl = QLabel(label)
+        lbl.setStyleSheet(
+            f"color:{theme.D.ACCENT}; font-family:'{theme.D.FONT_UI}';"
+            f"font-size:10px; font-weight:700; letter-spacing:0.8px;"
+        )
+        col.addWidget(lbl)
+        col.addWidget(widget)
+        return col
+
+    # ── Public API (lecture d'état) ───────────────────────────────────
+    def search_text(self) -> str:
+        return self._filter_search
+
     def filter_set(self) -> str | None:
         return self._filter_set
 
     def filter_slot(self) -> int | None:
         return self._filter_slot
 
-    def filter_stars(self) -> int | None:
-        return self._filter_stars
-
     def filter_rarity(self) -> str | None:
         return self._filter_rarity
+
+    def filter_stars(self) -> int | None:
+        return self._filter_stars
 
     def filter_level_min(self) -> int:
         return self._filter_level_min
 
-    def filter_equipped(self) -> str:
-        return self._filter_equipped
+    def filter_main_stat(self) -> str | None:
+        return self._filter_main_stat
 
+    def sort_key(self) -> str:
+        return self._sort_key
+
+    # ── Public API (mutation) ─────────────────────────────────────────
     def populate_sets(self, sets_in_profile: list[str]) -> None:
-        """Refresh the set dropdown with the sets actually present in the profile."""
         self._set_combo.blockSignals(True)
         self._set_combo.clear()
         self._set_combo.addItem("Tous les sets", userData=None)
@@ -209,135 +283,61 @@ class RuneFilterBar(QWidget):
 
     def reset_to_defaults(self) -> None:
         self.blockSignals(True)
-        self._set_combo.blockSignals(True)
         self._set_combo.setCurrentIndex(0)
-        self._set_combo.blockSignals(False)
+        self._rarity_combo.setCurrentIndex(0)
+        self._stars_combo.setCurrentIndex(0)
+        self._level_combo.setCurrentIndex(0)
+        self._main_combo.setCurrentIndex(0)
+        self._search.clear()
+        for n, btn in self._slot_btns.items():
+            btn.set_active(False)
+        self._rb_score.setChecked(True)
         self._filter_set = None
-        self._set_slot(None, emit=False)
-        self._set_stars(None, emit=False)
-        self._set_rarity(None, emit=False)
-        self._set_equipped("all", emit=False)
-        self._level_slider.blockSignals(True)
-        self._level_slider.setValue(0)
-        self._level_slider.blockSignals(False)
+        self._filter_slot = None
+        self._filter_rarity = None
+        self._filter_stars = None
         self._filter_level_min = 0
-        self._level_value.setText("+0")
+        self._filter_main_stat = None
+        self._filter_search = ""
+        self._sort_key = "score"
         self.blockSignals(False)
         self.changed.emit()
 
-    # ── builders ────────────────────────────────────────────────────
-    def _add_pill(
-        self, group: PillGroup, bucket: dict, key, label: str, handler,
-        active: bool = False, color: str | None = None,
-    ) -> None:
-        btn = PillButton(key, label, color=color)
-        btn.clicked.connect(lambda _c=False, k=key: handler(k))
-        btn.set_active(active)
-        group.add(btn)
-        bucket[key] = btn
+    # ── Slots ─────────────────────────────────────────────────────────
+    def _on_search_changed(self, txt: str) -> None:
+        self._filter_search = txt.strip().lower()
+        self.changed.emit()
 
-    def _build_level_slider(self) -> QWidget:
-        wrap = QFrame()
-        wrap.setObjectName("LevelSliderWrap")
-        wrap.setStyleSheet(
-            f"""
-            #LevelSliderWrap {{
-                background: rgba(255,255,255,0.03);
-                border: 1px solid {theme.D.BORDER};
-                border-radius: 999px;
-            }}
-            QLabel {{ background: transparent; border: none; }}
-            """
-        )
-        lay = QHBoxLayout(wrap)
-        lay.setContentsMargins(12, 3, 12, 3)
-        lay.setSpacing(8)
-
-        lbl = QLabel("Level ≥")
-        lbl.setStyleSheet(
-            f"color:{theme.D.FG_MUTE}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:11px; font-weight:600;"
-        )
-        lay.addWidget(lbl)
-
-        self._level_slider = QSlider(Qt.Orientation.Horizontal)
-        self._level_slider.setRange(0, 15)
-        self._level_slider.setValue(0)
-        self._level_slider.setFixedWidth(90)
-        self._level_slider.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._level_slider.setStyleSheet(
-            f"""
-            QSlider::groove:horizontal {{
-                background: #2a1018;
-                height: 4px; border-radius: 2px;
-            }}
-            QSlider::sub-page:horizontal {{
-                background: {theme.D.ACCENT};
-                height: 4px; border-radius: 2px;
-            }}
-            QSlider::handle:horizontal {{
-                background: {theme.D.ACCENT};
-                width: 12px; height: 12px;
-                margin: -4px 0; border-radius: 6px;
-                border: none;
-            }}
-            """
-        )
-        self._level_slider.valueChanged.connect(self._on_level_changed)
-        lay.addWidget(self._level_slider)
-
-        self._level_value = QLabel("+0")
-        self._level_value.setMinimumWidth(22)
-        self._level_value.setStyleSheet(
-            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_MONO}';"
-            f"font-size:11px; font-weight:600;"
-        )
-        lay.addWidget(self._level_value)
-        return wrap
-
-    # ── handlers ────────────────────────────────────────────────────
     def _on_set_changed(self, _idx: int) -> None:
         self._filter_set = self._set_combo.currentData()
         self.changed.emit()
 
-    def _set_slot(self, key, emit: bool = True) -> None:
-        # Click on active → reset to None (label "Slot").
-        if key is not None and self._filter_slot == key:
-            key = None
-        self._filter_slot = key if isinstance(key, int) else None
-        for k, b in self._slot_btns.items():
-            b.set_active(k == (self._filter_slot if self._filter_slot is not None else None))
-        if emit:
-            self.changed.emit()
+    def _set_slot(self, key: int) -> None:
+        if self._filter_slot == key:
+            self._filter_slot = None
+        else:
+            self._filter_slot = key
+        for n, btn in self._slot_btns.items():
+            btn.set_active(n == self._filter_slot)
+        self.changed.emit()
 
-    def _set_stars(self, key, emit: bool = True) -> None:
-        if key is not None and self._filter_stars == key:
-            key = None
-        self._filter_stars = key if isinstance(key, int) else None
-        for k, b in self._grade_btns.items():
-            b.set_active(k == self._filter_stars)
-        if emit:
-            self.changed.emit()
+    def _on_rarity_changed(self, _idx: int) -> None:
+        self._filter_rarity = self._rarity_combo.currentData()
+        self.changed.emit()
 
-    def _set_rarity(self, key, emit: bool = True) -> None:
-        if key is not None and self._filter_rarity == key:
-            key = None
-        self._filter_rarity = key if isinstance(key, str) else None
-        for k, b in self._rarity_btns.items():
-            b.set_active(k == self._filter_rarity)
-        if emit:
-            self.changed.emit()
+    def _on_stars_changed(self, _idx: int) -> None:
+        self._filter_stars = self._stars_combo.currentData()
+        self.changed.emit()
 
-    def _set_equipped(self, key, emit: bool = True) -> None:
-        if not isinstance(key, str):
-            key = "all"
-        self._filter_equipped = key
-        for k, b in self._equipped_btns.items():
-            b.set_active(k == key)
-        if emit:
-            self.changed.emit()
+    def _on_level_changed(self, _idx: int) -> None:
+        val = self._level_combo.currentData()
+        self._filter_level_min = int(val) if val is not None else 0
+        self.changed.emit()
 
-    def _on_level_changed(self, v: int) -> None:
-        self._filter_level_min = int(v)
-        self._level_value.setText(f"+{v}")
+    def _on_main_changed(self, _idx: int) -> None:
+        self._filter_main_stat = self._main_combo.currentData()
+        self.changed.emit()
+
+    def _on_sort_changed(self, _checked: bool) -> None:
+        self._sort_key = "level" if self._rb_level.isChecked() else "score"
         self.changed.emit()

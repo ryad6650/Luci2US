@@ -13,19 +13,12 @@ def test_defaults(qapp):
     assert w.filter_stars() is None
     assert w.filter_rarity() is None
     assert w.filter_level_min() == 0
-    assert w.filter_equipped() == "all"
+    assert w.filter_main_stat() is None
+    assert w.search_text() == ""
+    assert w.sort_key() == "score"
 
 
-def test_changed_emits_on_level_slider(qapp):
-    w = RuneFilterBar()
-    received = []
-    w.changed.connect(lambda: received.append(True))
-    w._level_slider.setValue(12)
-    assert received
-    assert w.filter_level_min() == 12
-
-
-def test_slot_pill_toggles_filter(qapp):
+def test_slot_pill_toggles(qapp):
     w = RuneFilterBar()
     w._slot_btns[3].click()
     assert w.filter_slot() == 3
@@ -33,40 +26,64 @@ def test_slot_pill_toggles_filter(qapp):
     assert w.filter_slot() is None
 
 
-def test_stars_pill_toggles_filter(qapp):
+def test_rarity_combo_sets_filter(qapp):
     w = RuneFilterBar()
-    w._grade_btns[6].click()
-    assert w.filter_stars() == 6
-    w._grade_btns[6].click()
-    assert w.filter_stars() is None
-
-
-def test_rarity_pill_selects_legendaire(qapp):
-    w = RuneFilterBar()
-    w._rarity_btns["Legendaire"].click()
+    received = []
+    w.changed.connect(lambda: received.append(True))
+    idx = w._rarity_combo.findData("Legendaire")
+    w._rarity_combo.setCurrentIndex(idx)
     assert w.filter_rarity() == "Legendaire"
+    assert received
 
 
-def test_equipped_pill_selects_free(qapp):
+def test_stars_combo_sets_filter(qapp):
     w = RuneFilterBar()
-    w._equipped_btns["free"].click()
-    assert w.filter_equipped() == "free"
+    idx = w._stars_combo.findData(6)
+    w._stars_combo.setCurrentIndex(idx)
+    assert w.filter_stars() == 6
+
+
+def test_level_combo_sets_filter(qapp):
+    w = RuneFilterBar()
+    idx = w._level_combo.findData(12)
+    w._level_combo.setCurrentIndex(idx)
+    assert w.filter_level_min() == 12
+
+
+def test_main_stat_combo_sets_filter(qapp):
+    w = RuneFilterBar()
+    idx = w._main_combo.findData("VIT")
+    w._main_combo.setCurrentIndex(idx)
+    assert w.filter_main_stat() == "VIT"
+
+
+def test_search_text_updates_state(qapp):
+    w = RuneFilterBar()
+    w._search.setText("Violent")
+    assert w.search_text() == "violent"
+
+
+def test_sort_switches_to_level(qapp):
+    w = RuneFilterBar()
+    w._rb_level.setChecked(True)
+    assert w.sort_key() == "level"
+    w._rb_score.setChecked(True)
+    assert w.sort_key() == "score"
 
 
 def test_populate_sets_lists_options(qapp):
     w = RuneFilterBar()
     w.populate_sets(["Violent", "Rapide"])
-    # 3 = "Tous les sets" + 2 supplied
-    assert w._set_combo.count() == 3
+    assert w._set_combo.count() == 3  # "Tous" + 2
 
 
 def test_reset_to_defaults_emits_single_changed(qapp):
     w = RuneFilterBar()
-    w._level_slider.setValue(12)
-    w._rarity_btns["Legendaire"].click()
+    w._rarity_combo.setCurrentIndex(w._rarity_combo.findData("Legendaire"))
+    w._slot_btns[2].click()
     received = []
     w.changed.connect(lambda: received.append(True))
     w.reset_to_defaults()
     assert len(received) == 1
-    assert w.filter_level_min() == 0
     assert w.filter_rarity() is None
+    assert w.filter_slot() is None
