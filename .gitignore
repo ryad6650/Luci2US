@@ -12,7 +12,12 @@ dist/
 # Local data
 history.db
 config.json
+profile_cache.json
 *.log
+
+# Temp / scratch files
+_tmp_*.png
+_tmp_*.jpg
 
 # Virtualenvs / editors
 .venv/
