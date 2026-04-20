@@ -26,7 +26,10 @@ venv/
 Thumbs.db
 
 # Fetched assets (run scripts/fetch_swarfarm_assets.py)
-assets/swarfarm/
+assets/swarfarm/*
+# Exceptions: rune + element icons sont commit (utilisés par l'UI)
+!assets/swarfarm/runes/
+!assets/swarfarm/elements/
 
 # HD icons (regen via scripts/upscale_monster_icons.py)
 assets/monsters_hd/
