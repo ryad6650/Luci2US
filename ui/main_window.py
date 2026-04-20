@@ -1,10 +1,13 @@
-"""QMainWindow shell: sidebar + content stack. Scan, Profils, Parametres sont implementes;
-Filtres / Runes / Monstres / Stats & Historique affichent un placeholder."""
+"""QMainWindow shell: frameless Windows-style title bar + sidebar + content stack.
+
+Scan, Profils, Parametres sont implementes; Filtres / Runes / Monstres /
+Stats & Historique affichent un placeholder.
+"""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QStackedWidget, QLabel,
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget, QLabel,
 )
 
 import monster_icons
@@ -15,10 +18,13 @@ from ui.controllers.scan_controller import ScanController
 from ui.filtres.filtres_page import FiltresPage
 from ui.monsters.monsters_page import MonstersPage
 from ui.profile.profile_page import ProfilePage
+from ui.runes.runes_page import RunesPage
 from ui.settings.settings_page import SettingsPage
 from ui.sidebar import Sidebar
 from ui.scan.scan_page import ScanPage
+from ui.stats_history.stats_history_page import StatsHistoryPage
 from ui.widgets.background import BackgroundPane
+from ui.widgets.title_bar import WinTitleBar
 
 
 def _placeholder(text: str) -> QWidget:
@@ -32,18 +38,30 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Luci2US")
-        self.resize(1200, 1000)
-        self.setMinimumSize(1000, theme.SIZE_APP_MIN_H)
-        self.setStyleSheet(f"QMainWindow {{ background:{theme.COLOR_BG_APP}; }}")
+        self.resize(1280, 900)
+        self.setMinimumSize(1100, 720)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setStyleSheet(f"QMainWindow {{ background:{theme.D.BG}; }}")
 
         root = QWidget()
-        root_lay = QHBoxLayout(root)
+        root_lay = QVBoxLayout(root)
         root_lay.setContentsMargins(0, 0, 0, 0)
         root_lay.setSpacing(0)
 
+        self._title_bar = WinTitleBar("Luci2US \u2014 Scan")
+        self._title_bar.minimize_clicked.connect(self.showMinimized)
+        self._title_bar.close_clicked.connect(self.close)
+        self._title_bar.maximize_toggled.connect(self._toggle_max_restore)
+        root_lay.addWidget(self._title_bar)
+
+        body = QWidget()
+        body_lay = QHBoxLayout(body)
+        body_lay.setContentsMargins(0, 0, 0, 0)
+        body_lay.setSpacing(0)
+
         self._sidebar = Sidebar()
         self._sidebar.nav_changed.connect(self._on_nav)
-        root_lay.addWidget(self._sidebar)
+        body_lay.addWidget(self._sidebar)
 
         content = QWidget()
         content_lay = QHBoxLayout(content)
@@ -62,13 +80,15 @@ class MainWindow(QMainWindow):
         # Index 1 : Filtres
         self.filtres_page = FiltresPage()
         self._stack.addWidget(self.filtres_page)
-        # Index 2 : Runes (placeholder, Plan 3)
-        self._stack.addWidget(_placeholder("Runes - a implementer"))
+        # Index 2 : Runes
+        self.runes_page = RunesPage()
+        self._stack.addWidget(self.runes_page)
         # Index 3 : Monstres
         self.monsters_page = MonstersPage()
         self._stack.addWidget(self.monsters_page)
-        # Index 4 : Stats & Historique (placeholder, Plan 4)
-        self._stack.addWidget(_placeholder("Stats & Historique - a implementer"))
+        # Index 4 : Stats & Historique
+        self.stats_history_page = StatsHistoryPage()
+        self._stack.addWidget(self.stats_history_page)
         # Index 5 : Profils
         self._stack.addWidget(self.profile_page)
         # Index 6 : Paramètres
@@ -78,7 +98,8 @@ class MainWindow(QMainWindow):
         bg_lay.addWidget(self._stack)
 
         content_lay.addWidget(bg)
-        root_lay.addWidget(content, 1)
+        body_lay.addWidget(content, 1)
+        root_lay.addWidget(body, 1)
 
         self.setCentralWidget(root)
 
@@ -99,8 +120,16 @@ class MainWindow(QMainWindow):
             self.monsters_page.apply_profile,
             type=Qt.ConnectionType.QueuedConnection,
         )
+        self.controller.profile_loaded.connect(
+            self.runes_page.apply_profile,
+            type=Qt.ConnectionType.QueuedConnection,
+        )
         self.controller.state_changed.connect(
             self.scan_page.set_active,
+            type=Qt.ConnectionType.QueuedConnection,
+        )
+        self.controller.state_changed.connect(
+            self._sidebar.set_live,
             type=Qt.ConnectionType.QueuedConnection,
         )
 
@@ -130,6 +159,7 @@ class MainWindow(QMainWindow):
         profile["source"] = "cache"
         self.profile_page.apply_profile(profile, self._last_profile_saved_at)
         self.monsters_page.apply_profile(profile, self._last_profile_saved_at)
+        self.runes_page.apply_profile(profile, self._last_profile_saved_at)
 
     def _restore_cached_profile(self) -> None:
         cached = load_profile_payload()
@@ -145,6 +175,7 @@ class MainWindow(QMainWindow):
         self._last_profile_saved_at = saved_at
         self.profile_page.apply_profile(profile, saved_at)
         self.monsters_page.apply_profile(profile, saved_at)
+        self.runes_page.apply_profile(profile, saved_at)
 
     def _on_profile_import(self, path: str) -> None:
         import datetime
@@ -174,15 +205,24 @@ class MainWindow(QMainWindow):
         self._last_profile_saved_at = mtime
         self.profile_page.apply_profile(profile, mtime)
         self.monsters_page.apply_profile(profile, mtime)
+        self.runes_page.apply_profile(profile, mtime)
 
     def _on_nav(self, key: str) -> None:
-        index = {
-            "scan":          0,
-            "filters":       1,
-            "runes":         2,
-            "monsters":      3,
-            "stats_history": 4,
-            "profile":       5,
-            "settings":      6,
-        }.get(key, 0)
+        pages = {
+            "scan":          (0, "Scan"),
+            "filters":       (1, "Filtres"),
+            "runes":         (2, "Runes"),
+            "monsters":      (3, "Monstres"),
+            "stats_history": (4, "Stats & Historique"),
+            "profile":       (5, "Profils"),
+            "settings":      (6, "Parametres"),
+        }
+        index, label = pages.get(key, (0, "Scan"))
         self._stack.setCurrentIndex(index)
+        self._title_bar.set_title(f"Luci2US \u2014 {label}")
+
+    def _toggle_max_restore(self) -> None:
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()

@@ -583,8 +583,11 @@ def match_filter_smart(
     grind_tier = 4 if f.grind >= 1 else 0
     gem_tier = {0: 0, 1: 3, 2: 4}.get(f.gem, 0)
 
+    # Mode 'max' : on cherche si AU MOINS UN scénario passe le filtre, donc
+    # on projette au potentiel théorique (rolls max). Un Smart Filter est une
+    # question de potentiel, pas de projection moyenne.
     variants = project_to_plus12(
-        rune, grind_grade=grind_tier, gem_grade=gem_tier,
+        rune, grind_grade=grind_tier, gem_grade=gem_tier, roll_mode="max",
     )
     return any(match_filter(v, f) for v in variants)
 

@@ -1,16 +1,16 @@
-"""Onglet Filtres S2US - panneau liste + éditeur."""
+"""Onglet Filtres S2US - panneau liste + éditeur multi-dossiers."""
 from __future__ import annotations
 
 import json
 import os
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QFileDialog, QSplitter, QVBoxLayout, QWidget,
+    QFileDialog, QHBoxLayout, QWidget,
 )
 
 from s2us_filter import S2USFilter, load_s2us_file
 from s2us_writer import save_s2us_file
+from ui.filtres.dossier import Dossier
 from ui.filtres.filter_editor import FilterEditor
 from ui.filtres.filter_list_panel import FilterListPanel
 from ui.filtres.rune_tester_modal import RuneTesterModal
@@ -28,122 +28,212 @@ def _read_config() -> dict:
         return {}
 
 
+def _write_config(cfg: dict) -> None:
+    try:
+        with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass
+
+
 class FiltresPage(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self._filters: list[S2USFilter] = []
-        self._global_settings: dict = {}
-        self._filter_file_path: str = ""
+        self._dossiers: list[Dossier] = []
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(8)
+        root = QHBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self._list_panel = FilterListPanel()
         self._editor = FilterEditor()
-        self._splitter.addWidget(self._list_panel)
-        self._splitter.addWidget(self._editor)
-        self._splitter.setSizes([260, 700])
+        root.addWidget(self._list_panel)
+        root.addWidget(self._editor, 1)
 
-        root.addWidget(self._splitter)
-
-        self._load_filters_from_config()
-        self._list_panel.set_filters(self._filters)
+        self._load_dossiers_from_config()
+        self._list_panel.set_dossiers(self._dossiers)
         self._list_panel.filter_added.connect(self._on_filter_added)
         self._list_panel.filter_removed.connect(self._on_filter_removed)
         self._list_panel.filter_moved.connect(self._on_filter_moved)
         self._list_panel.filter_selected.connect(self._on_filter_selected)
+        self._list_panel.dossier_removed.connect(self._on_dossier_removed)
+        self._list_panel.dossier_renamed.connect(self._on_dossier_renamed)
         self._list_panel.import_requested.connect(self._on_import)
         self._list_panel.export_requested.connect(self._on_export)
         self._list_panel.test_requested.connect(self._on_test)
         self._editor.filter_saved.connect(self._on_editor_saved)
 
-    def _load_filters_from_config(self) -> None:
+    # ── Config persistence ─────────────────────────────────────
+    def _load_dossiers_from_config(self) -> None:
         cfg = _read_config()
-        path = cfg.get("s2us", {}).get("filter_file", "")
-        if not path or not os.path.isfile(path):
-            self._filters = []
-            self._global_settings = {}
+        s2us_cfg = cfg.get("s2us", {})
+        entries = list(s2us_cfg.get("dossiers", []))
+
+        # Backward-compat: legacy single filter_file → first dossier.
+        legacy = s2us_cfg.get("filter_file")
+        if legacy and not entries:
+            entries = [{"name": _default_name(legacy), "path": legacy}]
+
+        for entry in entries:
+            path = entry.get("path", "")
+            if not path or not os.path.isfile(path):
+                continue
+            try:
+                filters, settings = load_s2us_file(path)
+            except (OSError, json.JSONDecodeError):
+                continue
+            name = entry.get("name") or _default_name(path)
+            self._dossiers.append(
+                Dossier(name=name, path=path,
+                        filters=filters, settings=settings)
+            )
+
+    def _persist_dossiers_to_config(self) -> None:
+        cfg = _read_config()
+        cfg.setdefault("s2us", {})
+        cfg["s2us"]["dossiers"] = [
+            {"name": d.name, "path": d.path} for d in self._dossiers
+        ]
+        cfg["s2us"].pop("filter_file", None)
+        _write_config(cfg)
+
+    def _save_dossier_file(self, didx: int) -> None:
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        d = self._dossiers[didx]
+        if not d.path:
             return
         try:
-            self._filters, self._global_settings = load_s2us_file(path)
-            self._filter_file_path = path
-        except (OSError, json.JSONDecodeError):
-            self._filters = []
-            self._global_settings = {}
-
-    def _on_filter_added(self) -> None:
-        new = S2USFilter(name="Nouveau filtre", enabled=True,
-                         sub_requirements={}, min_values={})
-        self._filters.append(new)
-        self._list_panel.set_filters(self._filters)
-        self._list_panel.select_index(len(self._filters) - 1)
-
-    def _on_filter_removed(self, idx: int) -> None:
-        if not (0 <= idx < len(self._filters)):
-            return
-        del self._filters[idx]
-        self._list_panel.set_filters(self._filters)
-        if self._filters:
-            self._list_panel.select_index(min(idx, len(self._filters) - 1))
-
-    def _on_filter_moved(self, src: int, dst: int) -> None:
-        if not (0 <= src < len(self._filters)):
-            return
-        if not (0 <= dst < len(self._filters)):
-            return
-        item = self._filters.pop(src)
-        self._filters.insert(dst, item)
-        self._list_panel.set_filters(self._filters)
-        self._list_panel.select_index(dst)
-
-    def _on_filter_selected(self, idx: int) -> None:
-        if 0 <= idx < len(self._filters):
-            self._editor.load_filter(self._filters[idx])
-
-    def _on_editor_saved(self, new_filter: S2USFilter) -> None:
-        idx = self._list_panel.current_index()
-        if idx < 0 or idx >= len(self._filters):
-            return
-        self._filters[idx] = new_filter
-        self._list_panel.set_filters(self._filters)
-        self._list_panel.select_index(idx)
-        self._write_filters_to_config_path()
-
-    def _write_filters_to_config_path(self) -> None:
-        path = self._filter_file_path
-        if not path:
-            return
-        try:
-            save_s2us_file(path, self._filters, self._global_settings)
+            save_s2us_file(d.path, d.filters, d.settings)
         except OSError:
             pass
 
+    # ── Filter ops ─────────────────────────────────────────────
+    def _on_filter_added(self, didx: int) -> None:
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        new = S2USFilter(name="Nouveau filtre", enabled=True,
+                         sub_requirements={}, min_values={})
+        self._dossiers[didx].filters.append(new)
+        new_idx = len(self._dossiers[didx].filters) - 1
+        self._list_panel.set_dossiers(self._dossiers)
+        self._list_panel.select_filter(didx, new_idx)
+        self._save_dossier_file(didx)
+
+    def _on_filter_removed(self, didx: int, fidx: int) -> None:
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        filters = self._dossiers[didx].filters
+        if not (0 <= fidx < len(filters)):
+            return
+        del filters[fidx]
+        self._list_panel.set_dossiers(self._dossiers)
+        if filters:
+            self._list_panel.select_filter(didx, min(fidx, len(filters) - 1))
+        self._save_dossier_file(didx)
+
+    def _on_filter_moved(self, didx: int, src: int, dst: int) -> None:
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        filters = self._dossiers[didx].filters
+        if not (0 <= src < len(filters)) or not (0 <= dst < len(filters)):
+            return
+        item = filters.pop(src)
+        filters.insert(dst, item)
+        self._list_panel.set_dossiers(self._dossiers)
+        self._list_panel.select_filter(didx, dst)
+        self._save_dossier_file(didx)
+
+    def _on_filter_selected(self, didx: int, fidx: int) -> None:
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        filters = self._dossiers[didx].filters
+        if 0 <= fidx < len(filters):
+            self._editor.load_filter(filters[fidx])
+
+    def _on_editor_saved(self, new_filter: S2USFilter) -> None:
+        sel = self._list_panel.current_selection()
+        if sel is None or sel[0] != "filter":
+            return
+        didx, fidx = int(sel[1]), int(sel[2])
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        filters = self._dossiers[didx].filters
+        if not (0 <= fidx < len(filters)):
+            return
+        filters[fidx] = new_filter
+        self._list_panel.set_dossiers(self._dossiers)
+        self._list_panel.select_filter(didx, fidx)
+        self._save_dossier_file(didx)
+
+    # ── Dossier ops ────────────────────────────────────────────
+    def _on_dossier_removed(self, didx: int) -> None:
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        del self._dossiers[didx]
+        self._list_panel.set_dossiers(self._dossiers)
+        self._persist_dossiers_to_config()
+
+    def _on_dossier_renamed(self, didx: int, new_name: str) -> None:
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        self._dossiers[didx].name = new_name
+        self._persist_dossiers_to_config()
+
+    # ── Import / Export / Test ─────────────────────────────────
     def _on_import(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Importer un fichier .s2us", "",
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Choisir ou créer un fichier .s2us", "",
+            "Filtres S2US (*.s2us);;Tous les fichiers (*.*)",
+        )
+        if not path:
+            return
+        if os.path.isfile(path):
+            try:
+                filters, settings = load_s2us_file(path)
+            except (OSError, json.JSONDecodeError):
+                return
+        else:
+            filters, settings = [], {}
+            try:
+                save_s2us_file(path, filters, settings)
+            except OSError:
+                return
+        d = Dossier(name=_default_name(path), path=path,
+                    filters=filters, settings=settings)
+        self._dossiers.append(d)
+        self._list_panel.set_dossiers(self._dossiers)
+        self._list_panel.select_dossier(len(self._dossiers) - 1)
+        self._persist_dossiers_to_config()
+
+    def _on_export(self) -> None:
+        sel = self._list_panel.current_selection()
+        if sel is None:
+            return
+        didx = int(sel[1])
+        if not (0 <= didx < len(self._dossiers)):
+            return
+        d = self._dossiers[didx]
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Exporter le dossier vers un fichier .s2us",
+            d.path or "",
             "Filtres S2US (*.s2us);;Tous les fichiers (*.*)",
         )
         if not path:
             return
         try:
-            self._filters, self._global_settings = load_s2us_file(path)
-            self._filter_file_path = path
-        except (OSError, json.JSONDecodeError):
-            return
-        self._list_panel.set_filters(self._filters)
-
-    def _on_export(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Exporter un fichier .s2us", self._filter_file_path or "",
-            "Filtres S2US (*.s2us);;Tous les fichiers (*.*)",
-        )
-        if not path:
-            return
-        save_s2us_file(path, self._filters, self._global_settings)
+            save_s2us_file(path, d.filters, d.settings)
+        except OSError:
+            pass
 
     def _on_test(self) -> None:
-        dlg = RuneTesterModal(filters=self._filters, parent=self)
+        all_filters = [f for d in self._dossiers for f in d.filters]
+        dlg = RuneTesterModal(filters=all_filters, parent=self)
         dlg.exec()
+
+
+def _default_name(path: str) -> str:
+    base = os.path.basename(path)
+    stem, _ = os.path.splitext(base)
+    return stem or "Dossier"

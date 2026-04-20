@@ -1,7 +1,9 @@
 """Central theme constants + asset path helpers for Luci2US PySide6 UI.
 
-Mirror of scan-page-v13.html CSS values. If a value is changed here it
-must match v13 or the reverse. v13 is the source of truth.
+Two palettes cohabit here:
+- legacy "Rune Forge" gold/bronze (COLOR_*) — used by older components.
+- design-handoff_scan "variation D" magenta/warm-brown (D.*) — used by
+  the redesigned Scan shell (title bar, sidebar, scan page).
 """
 from __future__ import annotations
 import os
@@ -72,3 +74,83 @@ def set_asset_name(set_fr: str) -> str:
     """Map a French set name from models.SET_FR_TO_EN to its asset filename (lowercase English)."""
     en = SET_FR_TO_EN.get(set_fr, set_fr)
     return en.lower()
+
+
+# ── Design tokens (variation D — magenta warm-dark) ──────────────────────
+# Mirror of design_handoff_scan/variation-d.jsx + README.md tokens.
+# Use these for the new Scan shell; keep legacy COLOR_* for older widgets.
+class D:
+    # Base background (deep warm brown-black)
+    BG          = "#0d0907"
+    BG_GRAD_HI  = "#3a1624"   # radial 12% 0%
+    BG_GRAD_LO  = "#2a1018"   # radial 100% 100%
+
+    # Glass surfaces — we simulate backdrop-blur with solid rgba fill
+    # (PyQt6/PySide6 has no backdrop-filter; README recommends "more opaque").
+    PANEL       = "rgba(36, 20, 26, 0.92)"       # cards
+    PANEL_2     = "rgba(48, 26, 34, 0.70)"       # inner panels
+    PANEL_FLAT  = "#241220"                       # fallback solid
+    STAT_BG     = "rgba(255, 255, 255, 0.03)"    # session stat cell
+    BORDER      = "rgba(255, 220, 230, 0.06)"
+    BORDER_STR  = "rgba(255, 220, 230, 0.10)"
+    SIDEBAR_BG  = "rgba(20, 12, 16, 0.96)"
+    TITLEBAR_BG = "rgba(13, 9, 7, 0.85)"
+
+    # Text
+    FG          = "#f5ecef"
+    FG_DIM      = "#c2a7af"
+    FG_MUTE     = "#7a6168"
+
+    # Accent rose magenta
+    ACCENT      = "#f0689a"
+    ACCENT_2    = "#d93d7a"
+    ACCENT_DIM  = "rgba(240, 104, 154, 0.14)"
+    ACCENT_BG   = "rgba(240, 104, 154, 0.08)"
+
+    # Semantic
+    OK          = "#5dd39e"   # keep (green)
+    ERR         = "#ef6461"   # sell (red)
+    WARN        = "#f4c05a"
+    INFO        = "#9dd9ff"
+
+    # Typography
+    FONT_UI     = "Inter"
+    FONT_MONO   = "JetBrains Mono"
+
+    # Shell sizes
+    TITLEBAR_H  = 36
+    SIDEBAR_W   = 188
+
+
+# Colours by rune set (for RuneGlyph placeholder tint + header accents).
+# Keys are the French set names used on models.Rune.set.
+SETS_COLOR: dict[str, str] = {
+    "Violent":       "#b892ff",
+    "Will":          "#9dd9ff",
+    "Rapide":        "#5dd1e8",   # Swift
+    "Desespoir":     "#7d7287",   # Despair
+    "Rage":          "#e86161",
+    "Fatal":         "#f4a74a",
+    "Energie":       "#f0c949",   # Energy
+    "Lame":          "#e86161",   # Blade
+    "Concentration": "#ffb4a2",   # Focus
+    "Garde":         "#7ea6ff",   # Guard
+    "Endurance":     "#b0a896",   # Endure
+    "Vengeance":     "#e8a0c4",
+    "Nemesis":       "#c09dff",
+    "Vampire":       "#b8425a",
+    "Destruction":   "#ff8a5a",
+    "Combat":        "#f0b070",
+    "Determination": "#a0c8a0",
+    "Amelioration":  "#e8c488",
+    "Precision":     "#8eb4ff",
+    "Tolerance":     "#b0d48a",
+    "Intangible":    "#c0c0d8",
+    "Sceau":         "#d8b0ff",
+    "Bouclier":      "#8ad0d0",
+}
+
+
+def set_color(set_fr: str) -> str:
+    """Return the accent colour for a rune set (French name) — falls back to ACCENT."""
+    return SETS_COLOR.get(set_fr, D.ACCENT)

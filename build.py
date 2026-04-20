@@ -27,9 +27,10 @@ def main() -> None:
     data_files: list[tuple[str, str]] = [
         ("swex_plugin", "swex_plugin"),
     ]
-    placeholder = os.path.join(root, "assets", "placeholder.png")
-    if os.path.isfile(placeholder):
-        data_files.append((os.path.join("assets", "placeholder.png"), "assets"))
+    for fname in ("placeholder.png", "logo.png", "icon.ico"):
+        path = os.path.join(root, "assets", fname)
+        if os.path.isfile(path):
+            data_files.append((os.path.join("assets", fname), "assets"))
     config_json = os.path.join(root, "config.json")
     if os.path.isfile(config_json):
         data_files.append(("config.json", "."))

@@ -28,6 +28,7 @@ class Rune:
     ancient: bool = False
     swex_efficiency: float | None = None
     swex_max_efficiency: float | None = None
+    rune_id: int | None = None
 
 
 @dataclass
@@ -69,6 +70,30 @@ ROLL_MAX_6: dict[str, int] = {
 ROLL_MAX_5: dict[str, int] = {
     "ATQ%": 7, "DEF%": 7, "PV%": 7, "VIT": 5, "CC": 5,
     "DC": 5, "RES": 7, "PRE": 7, "ATQ": 15, "DEF": 15, "PV": 300,
+}
+
+# Min roll par stat (source Spokland data-mining, cross-verif SWOP).
+ROLL_MIN_6: dict[str, int] = {
+    "ATQ%": 5, "DEF%": 5, "PV%": 5, "VIT": 4, "CC": 4,
+    "DC": 4, "RES": 4, "PRE": 4, "ATQ": 10, "DEF": 10, "PV": 135,
+}
+
+# 5★ min approximé depuis 6★ ; à affiner si besoin.
+ROLL_MIN_5: dict[str, int] = {
+    "ATQ%": 4, "DEF%": 4, "PV%": 4, "VIT": 3, "CC": 3,
+    "DC": 3, "RES": 4, "PRE": 4, "ATQ": 8, "DEF": 8, "PV": 108,
+}
+
+# Valeur de roll utilisée par Script2us (-.18.cs l.1743) : branche 6★ si
+# grade == 1032642102, sinon branche 5★. Les valeurs du bot sont donc
+# identiques aux ROLL_MAX par grade — pas de tirage aléatoire, flat = max SW.
+# Utilisées en mode 'mid' pour matcher exactement la projection du bot.
+ROLL_MID_6: dict[str, int] = dict(ROLL_MAX_6)
+ROLL_MID_5: dict[str, int] = dict(ROLL_MAX_5)
+
+# Nombre de subs présents à +0 selon la rareté (Hero a 3 subs, 4e apparaît à +12).
+ORIG_SUBS_BY_RARITY: dict[str, int] = {
+    "Normal": 0, "Magique": 1, "Rare": 2, "Heroique": 3, "Legendaire": 4,
 }
 
 # Max grind par stat selon grade de meule (0=aucune, 1=Magique, 2=Rare,

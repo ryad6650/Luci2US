@@ -11,6 +11,7 @@ from typing import Callable
 
 _ROOT = Path(__file__).parent
 _CACHE_DIR = _ROOT / "assets" / "monsters"
+_HD_DIR = _ROOT / "assets" / "monsters_hd"
 _MAP_FILE = _CACHE_DIR / "_icon_map.json"
 _BESTIARY_FILE = _ROOT / "bestiary.json"
 _SWARFARM_API = "https://swarfarm.com/api/v2/monsters/?format=json"
@@ -187,6 +188,9 @@ def get_monster_icon(unit_master_id: int) -> Path:
     _load_map()
     filename = _icon_map.get(unit_master_id)
     if filename:
+        hd_path = _HD_DIR / filename
+        if hd_path.is_file():
+            return hd_path
         path = _CACHE_DIR / filename
         if path.is_file():
             return path

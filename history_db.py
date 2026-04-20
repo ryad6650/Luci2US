@@ -132,3 +132,31 @@ def get_top_runes(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
         (limit,),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def get_sessions_with_stats(
+    conn: sqlite3.Connection, *, start: str, end: str, limit: int = 200,
+) -> list[dict]:
+    """Retourne les sessions dans [start, end] avec power_up et avg_score agreges.
+
+    - Colonnes sessions originales : id, start_time, end_time, dungeon, total, keep, sell.
+    - Colonnes calculees :
+        * power_up : nombre de runes avec verdict = 'POWER-UP' dans la session.
+        * avg_score : moyenne des `score` non-null des runes de la session (None si aucun).
+    - Ordre : DESC par id (plus recentes inserees en premier).
+    """
+    rows = conn.execute(
+        "SELECT s.id, s.start_time, s.end_time, s.dungeon, "
+        "       s.total, s.keep, s.sell, "
+        "       COALESCE(SUM(CASE WHEN r.verdict = 'POWER-UP' THEN 1 ELSE 0 END), 0) "
+        "           AS power_up, "
+        "       AVG(r.score) AS avg_score "
+        "FROM sessions s "
+        "LEFT JOIN runes r ON r.session_id = s.id "
+        "WHERE s.start_time >= ? AND s.start_time <= ? "
+        "GROUP BY s.id "
+        "ORDER BY s.id DESC "
+        "LIMIT ?",
+        (start, end, limit),
+    ).fetchall()
+    return [dict(r) for r in rows]
