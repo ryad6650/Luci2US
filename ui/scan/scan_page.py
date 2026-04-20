@@ -1,31 +1,93 @@
-"""Scan page — live dashboard (design_handoff_scan / variation D).
+"""Scan page — refondue selon Plan page scan.png.
 
-Layout:
-    ScanHeader       (live feed, Farming/Paused pill)
-    SessionStats     (4 glass counter cards)
-    LastRuneCard | UpgradeRuneCard      (grid 1.2fr / 1fr)
-    HistoryList      (2-col grid, scrollable)
+Layout :
+    "SCAN" (titre)
+    ┌─────────────────────────────┬───────────────────────┐
+    │ LastScannedCard             │ ScanHistoryPanel       │
+    │                             ├───────────────────────┤
+    │                             │ UpgradedRunePanel      │
+    └─────────────────────────────┴───────────────────────┘
 
-Public API preserved from the previous implementation so scan_controller /
-main_window / tests don't need to change:
-    - set_active(bool)
-    - on_rune(rune, verdict, mana, swop, s2us, set_bonus)
-    - on_rune_upgraded(rune, verdict, mana, swop, s2us, set_bonus)
+État au démarrage : les trois panneaux sont en état vide.
+Aucune fausse rune / fausse liste d'historique n'est injectée.
+
+API publique :
+    - set_active(active: bool)
+    - on_rune(rune, verdict, ...)           → update_scanned_rune
+    - on_rune_upgraded(rune, verdict, ...)  → update_upgrade
+    - update_scanned_rune(rune, verdict)    → méthode modulaire externe
+    - update_upgrade(rune, verdict, ...)    → idem pour l'amélioration
 """
 from __future__ import annotations
-import time
+import os
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QGridLayout, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainter, QPixmap
+from PySide6.QtWidgets import (
+    QFrame, QGridLayout, QLabel, QVBoxLayout, QWidget,
+)
 
 from models import Rune, Verdict
 from ui import theme
-from ui.scan.history_item import TYPE_NEW, TYPE_UPGRADE
-from ui.scan.history_list import HistoryList
-from ui.scan.last_rune_card import LastRuneCard
-from ui.scan.scan_header import ScanHeader
-from ui.scan.session_stats import SessionStats
-from ui.scan.upgrade_rune_card import UpgradeRuneCard
+from ui.scan.last_scanned_card import LastScannedCard
+from ui.scan.scan_history_panel import ScanHistoryPanel
+from ui.scan.upgraded_rune_panel import UpgradedRunePanel
+
+
+_SCAN_BG_ASSET = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "..", "assets", "swarfarm", "scan_bg", "magic_circle.png",
+))
+
+
+class _PageBg(QWidget):
+    """Fond pleine page : pixmap 'cover' sans déformation.
+
+    Peint le pixmap en `KeepAspectRatioByExpanding` (comme CSS `background-size:
+    cover`) : l'image remplit tout le rectangle sans déformation, quitte à en
+    rogner les bords. Dégradé sombre en fallback si l'asset manque.
+    """
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setStyleSheet(
+            """
+            background-color: qlineargradient(
+                x1:0, y1:0, x2:1, y2:1,
+                stop:0 #1c212c,
+                stop:0.5 #171b24,
+                stop:1 #1d242f
+            );
+            """
+        )
+        self._pix = QPixmap(_SCAN_BG_ASSET)
+
+    def paintEvent(self, e) -> None:  # noqa: N802
+        super().paintEvent(e)
+        if self._pix.isNull():
+            return
+        painter = QPainter(self)
+        try:
+            target = self.rect()
+            scaled = self._pix.scaled(
+                target.size(),
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            # Centrer le pixmap agrandi pour que le rognage soit équilibré.
+            x = target.x() + (target.width() - scaled.width()) // 2
+            y = target.y() + (target.height() - scaled.height()) // 2
+            painter.drawPixmap(x, y, scaled)
+        finally:
+            painter.end()
+
+
+class _PageDim(QWidget):
+    """Overlay sombre pleine page pour préserver la lisibilité."""
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 0.55);")
 
 
 class ScanPage(QWidget):
@@ -35,111 +97,122 @@ class ScanPage(QWidget):
             f"ScanPage {{ background: transparent; color: {theme.D.FG}; }}"
         )
 
+        # Ordre de création = ordre de stacking (les layouts ne l'affectent pas).
+        # _bg en premier (derrière), puis _dim, puis le contenu par le layout.
+        self._bg = _PageBg(self)
+        self._dim = _PageDim(self)
+
         self._total = 0
         self._kept = 0
         self._sold = 0
         self._eff_sum = 0.0
-        self._started_at: float | None = None
-
-        self._timer = QTimer(self)
-        self._timer.setInterval(1000)
-        self._timer.timeout.connect(self._tick_time)
+        self._active = False
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(24, 24, 24, 24)
-        outer.setSpacing(18)
+        outer.setContentsMargins(24, 20, 24, 20)
+        outer.setSpacing(14)
 
-        self._header = ScanHeader()
-        outer.addWidget(self._header)
+        # ── titre "SCAN" ──
+        self._title = QLabel("SCAN")
+        self._title.setStyleSheet(
+            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';"
+            f"font-size:30px; font-weight:800; letter-spacing:1.5px;"
+        )
+        outer.addWidget(self._title)
 
-        self._stats = SessionStats()
-        outer.addWidget(self._stats)
+        # ── grille 2 colonnes ──
+        grid_host = QWidget()
+        grid = QGridLayout(grid_host)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(14)
+        grid.setVerticalSpacing(14)
+        grid.setColumnStretch(0, 14)
+        grid.setColumnStretch(1, 9)
 
-        # ── hero row: last rune (1.2fr) + upgrade (1fr) ──
-        hero = QWidget()
-        hero_grid = QGridLayout(hero)
-        hero_grid.setContentsMargins(0, 0, 0, 0)
-        hero_grid.setHorizontalSpacing(18)
-        hero_grid.setColumnStretch(0, 12)
-        hero_grid.setColumnStretch(1, 10)
+        self._last_card = LastScannedCard()
+        grid.addWidget(self._last_card, 0, 0, 2, 1)
 
-        self._last_card = LastRuneCard()
-        self._upgrade_card = UpgradeRuneCard()
-        hero_grid.addWidget(self._last_card, 0, 0)
-        hero_grid.addWidget(self._upgrade_card, 0, 1)
-        outer.addWidget(hero)
+        self._history = ScanHistoryPanel()
+        self._history.entry_clicked.connect(self._on_history_clicked)
+        grid.addWidget(self._history, 0, 1)
 
-        self._history = HistoryList()
-        self._history.item_clicked.connect(self._on_history_clicked)
-        outer.addWidget(self._history, 1)
+        self._upgrade_card = UpgradedRunePanel()
+        grid.addWidget(self._upgrade_card, 1, 1)
 
-    # ── public API ─────────────────────────────────────────────────────
+        grid.setRowStretch(0, 7)
+        grid.setRowStretch(1, 5)
+        outer.addWidget(grid_host, 1)
+        # Pas d'injection de mock data : tout démarre en état vide.
+
+    def resizeEvent(self, e) -> None:  # noqa: N802
+        self._bg.setGeometry(0, 0, self.width(), self.height())
+        self._dim.setGeometry(0, 0, self.width(), self.height())
+        super().resizeEvent(e)
+
+    # ── API modulaire ──────────────────────────────────────────────────
+    def update_scanned_rune(self, rune: Rune, verdict: Verdict) -> None:
+        """Afficher une rune dans le panneau central + l'ajouter à l'historique."""
+        self._last_card.update_scanned_rune(rune, verdict)
+        self._history.add_rune(rune, verdict)
+
+    def update_upgrade(
+        self, rune: Rune, verdict: Verdict,
+        level_from: int | None = None,
+        boosted_stat: str | None = None,
+        boosted_delta: float | None = None,
+    ) -> None:
+        """Afficher une rune améliorée dans le panneau bas-droit."""
+        self._upgrade_card.update_upgrade(
+            rune, verdict,
+            level_from=level_from,
+            boosted_stat=boosted_stat,
+            boosted_delta=boosted_delta,
+        )
+
+    # ── API historique (compat scan_controller / main_window) ─────────
     def set_active(self, active: bool) -> None:
-        self._header.set_active(active)
-        if active:
+        # Reset uniquement sur la transition inactif→actif : sinon chaque
+        # changement d'état interne (SCANNING↔ANALYZING) effacerait la rune
+        # qui vient d'être scannée et l'historique de la session.
+        active = bool(active)
+        was_active = self._active
+        self._active = active
+        if active and not was_active:
             self._reset_session()
-            self._started_at = time.monotonic()
-            self._history.set_session_start(self._started_at)
-            self._timer.start()
-            self._tick_time()
-        else:
-            self._timer.stop()
 
     def _reset_session(self) -> None:
-        """Wipe counters, feed and hero cards on each new scan session."""
         self._total = 0
         self._kept = 0
         self._sold = 0
         self._eff_sum = 0.0
-        self._stats.update_counts(total=0, kept=0, sold=0, avg_eff=0.0)
         self._history.clear()
-        self._last_card.set_empty()
-        self._upgrade_card.set_empty()
+        self._last_card.show_empty_state()
+        self._upgrade_card.show_empty_state()
 
     def on_rune(
-        self, rune: Rune, verdict: Verdict, mana: int,
-        swop: tuple[float, float], s2us: tuple[float, float],
+        self, rune: Rune, verdict: Verdict, mana: int = 0,
+        swop: tuple[float, float] = (0.0, 0.0),
+        s2us: tuple[float, float] = (0.0, 0.0),
         set_bonus: str = "",
     ) -> None:
         self._total += 1
         eff = float(verdict.score or 0.0)
-        if verdict.decision == "KEEP":
+        if (verdict.decision or "").upper() == "KEEP":
             self._kept += 1
-        elif verdict.decision == "SELL":
+        elif (verdict.decision or "").upper() == "SELL":
             self._sold += 1
         self._eff_sum += eff
-
-        self._stats.update_counts(
-            total=self._total, kept=self._kept, sold=self._sold,
-            avg_eff=self._eff_sum / self._total if self._total else 0.0,
-        )
-
-        self._last_card.update_rune(rune, verdict)
-        self._history.add(
-            rune, verdict, kind=TYPE_NEW,
-            mana=mana, swop=swop, s2us=s2us, set_bonus=set_bonus,
-        )
+        self.update_scanned_rune(rune, verdict)
 
     def on_rune_upgraded(
-        self, rune: Rune, verdict: Verdict, mana: int,
-        swop: tuple[float, float], s2us: tuple[float, float],
+        self, rune: Rune, verdict: Verdict, mana: int = 0,
+        swop: tuple[float, float] = (0.0, 0.0),
+        s2us: tuple[float, float] = (0.0, 0.0),
         set_bonus: str = "",
     ) -> None:
-        self._upgrade_card.update_rune(rune, verdict)
-        self._history.add(
-            rune, verdict, kind=TYPE_UPGRADE,
-            mana=mana, swop=swop, s2us=s2us, set_bonus=set_bonus,
-        )
+        self.update_upgrade(rune, verdict)
+        self._history.add_rune(rune, verdict)
 
     # ── internals ──────────────────────────────────────────────────────
-    def _tick_time(self) -> None:
-        if self._started_at is None:
-            return
-        self._header.update_time(int(time.monotonic() - self._started_at))
-
-    def _on_history_clicked(
-        self, rune: Rune, verdict: Verdict, _mana: int,
-        _swop: tuple, _s2us: tuple, _set_bonus: str,
-    ) -> None:
-        # Clicking an item re-plays it into the Last-rune hero card.
-        self._last_card.update_rune(rune, verdict)
+    def _on_history_clicked(self, rune: Rune, verdict: Verdict) -> None:
+        self._last_card.update_scanned_rune(rune, verdict)

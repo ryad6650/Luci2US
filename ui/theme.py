@@ -80,21 +80,20 @@ def set_asset_name(set_fr: str) -> str:
 # Mirror of design_handoff_scan/variation-d.jsx + README.md tokens.
 # Use these for the new Scan shell; keep legacy COLOR_* for older widgets.
 class D:
-    # Base background (deep warm brown-black)
-    BG          = "#0d0907"
-    BG_GRAD_HI  = "#3a1624"   # radial 12% 0%
-    BG_GRAD_LO  = "#2a1018"   # radial 100% 100%
+    # Base background — Dark Slate (gris-bleu très foncé, cf. maquette Scan)
+    BG          = "#1a1d24"
+    BG_GRAD_HI  = "#232730"   # radial 12% 0%
+    BG_GRAD_LO  = "#1f232c"   # radial 100% 100%
 
-    # Glass surfaces — we simulate backdrop-blur with solid rgba fill
-    # (PyQt6/PySide6 has no backdrop-filter; README recommends "more opaque").
-    PANEL       = "rgba(36, 20, 26, 0.92)"       # cards
-    PANEL_2     = "rgba(48, 26, 34, 0.70)"       # inner panels
-    PANEL_FLAT  = "#241220"                       # fallback solid
-    STAT_BG     = "rgba(255, 255, 255, 0.03)"    # session stat cell
-    BORDER      = "rgba(255, 220, 230, 0.06)"
-    BORDER_STR  = "rgba(255, 220, 230, 0.10)"
-    SIDEBAR_BG  = "rgba(20, 12, 16, 0.96)"
-    TITLEBAR_BG = "rgba(13, 9, 7, 0.85)"
+    # Panels — un cran plus clair que le fond pour la carte glass.
+    PANEL       = "#232730"                       # cards
+    PANEL_2     = "rgba(40, 46, 58, 0.70)"        # inner panels
+    PANEL_FLAT  = "#232730"                       # fallback solid
+    STAT_BG     = "rgba(255, 255, 255, 0.04)"    # session stat cell
+    BORDER      = "rgba(255, 255, 255, 0.08)"
+    BORDER_STR  = "rgba(255, 255, 255, 0.14)"
+    SIDEBAR_BG  = "#15171c"
+    TITLEBAR_BG = "#15171c"
 
     # Text
     FG          = "#f5ecef"

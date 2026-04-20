@@ -97,8 +97,11 @@ class VerdictOverlay(QWidget):
     # -- public API -------------------------------------------------------
 
     def show_verdict(self, rune: Rune, verdict: Verdict) -> None:
-        self._apply_style(verdict.decision)
-        self._lbl_decision.setText(verdict.decision)
+        # POWER-UP: logique interne conservée (auto_mode, stats); fusionné avec
+        # KEEP au rendu pour n'afficher que KEEP / SELL dans l'overlay.
+        decision = "KEEP" if verdict.decision == "POWER-UP" else verdict.decision
+        self._apply_style(decision)
+        self._lbl_decision.setText(decision)
         self._lbl_reason.setText(_short_reason(rune, verdict))
         self.show()
         self.raise_()

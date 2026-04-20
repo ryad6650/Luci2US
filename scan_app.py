@@ -132,6 +132,11 @@ def main() -> int:
     _apply_app_icon(app, w)
     splash.finished.connect(w.show)
 
+    # Navigation initiale optionnelle (utilisee par visual-ui-verification).
+    _start_page = os.environ.get("LUCI2US_START_PAGE", "").strip().lower()
+    if _start_page:
+        splash.finished.connect(lambda k=_start_page: w._on_nav(k))
+
     overlay_cfg = cfg.setdefault("overlay", {})
     overlay_cfg.setdefault("enabled", True)
     overlay_cfg.setdefault("duration_ms", 3000)
