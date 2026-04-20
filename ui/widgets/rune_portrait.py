@@ -19,11 +19,29 @@ from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout
 GOLD_BORDER = "#e8b040"
 GOLD_SOFT = "#ffd07a"
 
+_DEFAULT_GRADIENT = ("#f5a430", "#d97a1b", "#8c4610")
+
+_RARITY_GRADIENT = {
+    "Legendaire": ("#f5c16e", "#c98a2a", "#5c3a10"),
+    "Heroique":   ("#ED8DED", "#9f4ca0", "#3f1a42"),
+    "Rare":       ("#5aa0d8", "#2e6a9c", "#14304e"),
+    "Magique":    ("#8ec44a", "#4e8825", "#1f3a0f"),
+    "Normal":     ("#9a9aa2", "#5a5a62", "#262630"),
+}
+
 
 class RunePortrait(QFrame):
-    def __init__(self, size: int = 100, parent=None) -> None:
+    def __init__(
+        self,
+        size: int = 100,
+        border_color: str | None = None,
+        rarity: str | None = None,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self._size = size
+        self._border_color = border_color or GOLD_BORDER
+        self._gradient = _RARITY_GRADIENT.get(rarity, _DEFAULT_GRADIENT)
         self.setObjectName("RunePortrait")
         self.setFixedSize(size, size)
         self._apply_placeholder_style()
@@ -38,18 +56,49 @@ class RunePortrait(QFrame):
         self._image.setStyleSheet("background: transparent; border: none;")
         lay.addWidget(self._image)
 
+    def set_border_color(self, color: str) -> None:
+        self._border_color = color
+        if self._image.pixmap() is None or self._image.pixmap().isNull():
+            self._apply_placeholder_style()
+        else:
+            self._apply_image_style()
+
+    def set_rarity(self, rarity: str | None) -> None:
+        self._gradient = _RARITY_GRADIENT.get(rarity, _DEFAULT_GRADIENT)
+        if self._image.pixmap() is None or self._image.pixmap().isNull():
+            self._apply_placeholder_style()
+        else:
+            self._apply_image_style()
+
     def _apply_placeholder_style(self) -> None:
-        # Dégradé orange temporaire + bordure dorée + coins arrondis.
+        s0, s1, s2 = self._gradient
         self.setStyleSheet(
             f"""
             #RunePortrait {{
                 background: qlineargradient(
                     x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #f5a430,
-                    stop:0.55 #d97a1b,
-                    stop:1 #8c4610
+                    stop:0 {s0},
+                    stop:0.55 {s1},
+                    stop:1 {s2}
                 );
-                border: 3px solid {GOLD_BORDER};
+                border: 3px solid {self._border_color};
+                border-radius: 16px;
+            }}
+            """
+        )
+
+    def _apply_image_style(self) -> None:
+        s0, s1, s2 = self._gradient
+        self.setStyleSheet(
+            f"""
+            #RunePortrait {{
+                background: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {s0},
+                    stop:0.55 {s1},
+                    stop:1 {s2}
+                );
+                border: 3px solid {self._border_color};
                 border-radius: 16px;
             }}
             """
@@ -62,24 +111,20 @@ class RunePortrait(QFrame):
             self._apply_placeholder_style()
             return
         self._image.setPixmap(pixmap)
-        # Quand une image est là, on garde la bordure dorée mais on laisse
-        # le QLabel dessiner l'image (le background-gradient reste sous l'image
-        # arrondie par le QSS parent).
-        self.setStyleSheet(
-            f"""
-            #RunePortrait {{
-                background: #20242c;
-                border: 3px solid {GOLD_BORDER};
-                border-radius: 16px;
-            }}
-            """
-        )
+        self._apply_image_style()
 
 
 class RunePortraitWithLevel(QFrame):
     """Portrait + pastille de niveau dorée (style mockup '+12')."""
 
-    def __init__(self, size: int = 100, level: str = "+12", parent=None) -> None:
+    def __init__(
+        self,
+        size: int = 100,
+        level: str = "+12",
+        border_color: str | None = None,
+        rarity: str | None = None,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.setStyleSheet("background: transparent;")
         lay = QVBoxLayout(self)
@@ -87,7 +132,7 @@ class RunePortraitWithLevel(QFrame):
         lay.setSpacing(6)
         lay.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
-        self._portrait = RunePortrait(size=size)
+        self._portrait = RunePortrait(size=size, border_color=border_color, rarity=rarity)
         lay.addWidget(self._portrait, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._level = QLabel(level)

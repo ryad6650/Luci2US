@@ -10,11 +10,19 @@ shows a pulsing LIVE dot when the bot is running.
 """
 from __future__ import annotations
 
+import os
+
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, Signal, Property
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from ui import theme
+
+
+_LOGO_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "Summoners_War_Logo.png",
+)
 
 
 NAV_ITEMS: list[tuple[str, str, str | None]] = [
@@ -176,11 +184,25 @@ class Sidebar(QFrame):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
 
+        logo = QLabel()
+        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        pix = QPixmap(_LOGO_PATH)
+        if not pix.isNull():
+            target_w = max(96, theme.D.SIDEBAR_W - 40)
+            logo.setPixmap(
+                pix.scaledToWidth(
+                    target_w,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+        logo.setStyleSheet("padding:16px 14px 4px;")
+        lay.addWidget(logo)
+
         eyebrow = QLabel("WORKSPACE")
         eyebrow.setStyleSheet(
             f"color:{theme.D.FG_MUTE}; font-family:'{theme.D.FONT_UI}';"
             f"font-size:10px; font-weight:600; letter-spacing:1.5px;"
-            f"padding:18px 14px 10px;"
+            f"padding:8px 14px 10px;"
         )
         lay.addWidget(eyebrow)
 

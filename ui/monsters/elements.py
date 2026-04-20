@@ -58,77 +58,175 @@ def hex_alpha(hex_color: str, aa: str) -> str:
     return f"{hex_color}{aa}"
 
 
+# ── Vector star rendering ─────────────────────────────────────────────────
+import math
+
+
+def _star_path(cx: float, cy: float, r_outer: float, r_inner: float | None = None) -> QPainterPath:
+    """Classic 5-point star centred on (cx, cy), tip pointing up."""
+    if r_inner is None:
+        r_inner = r_outer * 0.42
+    path = QPainterPath()
+    for i in range(10):
+        r = r_outer if i % 2 == 0 else r_inner
+        theta = -math.pi / 2 + i * math.pi / 5
+        x = cx + r * math.cos(theta)
+        y = cy + r * math.sin(theta)
+        if i == 0:
+            path.moveTo(x, y)
+        else:
+            path.lineTo(x, y)
+    path.closeSubpath()
+    return path
+
+
+def _draw_stars(
+    p: QPainter,
+    n: int,
+    cx: float,
+    cy: float,
+    star_r: float,
+    color: QColor,
+    overlap: float = 0.45,
+    shadow: bool = True,
+) -> None:
+    """Draw a horizontal row of n filled stars centred at (cx, cy).
+
+    `overlap` is the fraction of each star's diameter that overlaps the
+    previous one — e.g. 0.45 mimics the tight stacking used by Summoners
+    War nameplates. Stars paint left-to-right so later stars overlay earlier.
+    """
+    n = max(0, min(6, int(n)))
+    if n == 0:
+        return
+    step = star_r * 2 * (1 - overlap)
+    total_w = star_r * 2 + step * (n - 1)
+    x = cx - total_w / 2 + star_r
+    p.save()
+    p.setPen(Qt.PenStyle.NoPen)
+    for _ in range(n):
+        if shadow:
+            p.setBrush(QBrush(QColor(0, 0, 0, 180)))
+            p.drawPath(_star_path(x + 0.8, cy + 0.8, star_r))
+        p.setBrush(QBrush(color))
+        p.drawPath(_star_path(x, cy, star_r))
+        x += step
+    p.restore()
+
+
+def make_star_pixmap(size: int, color: QColor) -> QPixmap:
+    """Crisp vector ★ rendered into a transparent pixmap (for QIcon use)."""
+    dpr = 2
+    px = QPixmap(size * dpr, size * dpr)
+    px.setDevicePixelRatio(dpr)
+    px.fill(Qt.GlobalColor.transparent)
+    p = QPainter(px)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QBrush(color))
+    p.drawPath(_star_path(size / 2, size / 2, size / 2 - 0.5))
+    p.end()
+    return px
+
+
 # ── Stars row ─────────────────────────────────────────────────────────────
-class Stars(QLabel):
-    """'★★★★★★' — n lit stars + (6-n) dimmed, magenta accent."""
+class Stars(QWidget):
+    """Vector-drawn row of 6 SW-style overlapping stars (n lit, 6-n dimmed)."""
+
+    OVERLAP = 0.45   # fraction of star diameter that overlaps its neighbour
 
     def __init__(self, n: int, size: int = 11, color: str | None = None, parent=None) -> None:
         super().__init__(parent)
         self._n = max(0, min(6, int(n)))
-        self._size = size
+        self._size = int(size)                # outer diameter in pixels
         self._color = color or theme.D.ACCENT
-        self._refresh()
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self._update_size()
 
     def set_stars(self, n: int) -> None:
         self._n = max(0, min(6, int(n)))
-        self._refresh()
+        self.update()
 
-    def _refresh(self) -> None:
-        c = QColor(self._color)
-        lit = "★" * self._n
-        dim = "★" * (6 - self._n)
-        # We can't style two spans inside a single QLabel trivially, so render
-        # with letter-spacing and rely on opacity via text colour. Use HTML.
-        lit_html = f"<span style='color:{self._color};'>{lit}</span>"
-        dim_html = (
-            f"<span style='color:rgba({c.red()},{c.green()},{c.blue()},0.18);'>"
-            f"{dim}</span>"
-        )
-        self.setText(f"{lit_html}{dim_html}")
-        self.setStyleSheet(
-            f"font-size:{self._size}px; letter-spacing:0.5px;"
-            f"font-family:'{theme.D.FONT_UI}';"
-        )
+    def _update_size(self) -> None:
+        step = self._size * (1 - self.OVERLAP)
+        w = int(self._size + step * 5 + 2)
+        h = int(self._size + 2)
+        self.setFixedSize(w, h)
+
+    def sizeHint(self) -> QSize:   # noqa: N802
+        return self.size()
+
+    def paintEvent(self, _e) -> None:  # noqa: N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = self._size / 2
+        cy = self.height() / 2
+        step = self._size * (1 - self.OVERLAP)
+        lit = QColor(self._color)
+        dim = QColor(self._color)
+        dim.setAlphaF(0.18)
+        shadow = QColor(0, 0, 0, 170)
+        x = r + 1
+        p.setPen(Qt.PenStyle.NoPen)
+        for i in range(6):
+            path = _star_path(x, cy, r)
+            p.setBrush(QBrush(shadow))
+            p.drawPath(_star_path(x + 0.6, cy + 0.6, r))
+            p.setBrush(QBrush(lit if i < self._n else dim))
+            p.drawPath(path)
+            x += step
+        p.end()
 
 
 # ── Element chip ──────────────────────────────────────────────────────────
 class ElementChip(QWidget):
-    """Small pill: coloured dot + element label, element-tinted bg."""
+    """Small element-tinted circular badge containing just the element icon."""
+
+    _SIZES = {"sm": 22, "md": 28}
 
     def __init__(self, element: str, size: str = "sm", parent=None) -> None:
         super().__init__(parent)
         meta = element_meta(element)
-        pad_h = 7 if size == "sm" else 10
-        pad_v = 2 if size == "sm" else 4
-        fs = 10 if size == "sm" else 11
+        diameter = self._SIZES.get(size, self._SIZES["sm"])
+        icon_size = max(12, int(diameter * 0.66))
 
+        self.setFixedSize(diameter, diameter)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        radius = diameter // 2
         self.setStyleSheet(
             f"""
             ElementChip {{
                 background: {hex_alpha(meta.color, '1c')};
                 border: 1px solid {hex_alpha(meta.color, '33')};
-                border-radius: 999px;
+                border-radius: {radius}px;
             }}
             """
         )
+        self.setToolTip(meta.label)
 
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(pad_h, pad_v, pad_h, pad_v)
-        lay.setSpacing(5)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        dot = QLabel()
-        dot.setFixedSize(6, 6)
-        dot.setStyleSheet(f"background:{meta.color}; border-radius:3px;")
-        lay.addWidget(dot, 0, Qt.AlignmentFlag.AlignVCenter)
-
-        lbl = QLabel(meta.label)
-        lbl.setStyleSheet(
-            f"color:{meta.color}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:{fs}px; font-weight:600; letter-spacing:0.3px;"
-            f"background:transparent; border:none;"
-        )
-        lay.addWidget(lbl, 0, Qt.AlignmentFlag.AlignVCenter)
+        icon = QLabel()
+        icon.setFixedSize(icon_size, icon_size)
+        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon.setStyleSheet("background: transparent; border: none;")
+        icon_path = Path(theme.asset_element_icon(meta.key))
+        if icon_path.is_file():
+            px = QPixmap(str(icon_path))
+            if not px.isNull():
+                dpr = self.devicePixelRatioF() or 1.0
+                target = max(1, int(round(icon_size * dpr)))
+                scaled = px.scaled(
+                    target, target,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                scaled.setDevicePixelRatio(dpr)
+                icon.setPixmap(scaled)
+        lay.addWidget(icon, 0, Qt.AlignmentFlag.AlignCenter)
 
 
 # ── Rune mini dots row (6 tiny circles) ───────────────────────────────────
@@ -148,6 +246,8 @@ class RuneMiniDots(QWidget):
     def paintEvent(self, _e) -> None:  # noqa: N802
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         p.setPen(Qt.PenStyle.NoPen)
 
         accent = QColor(theme.D.ACCENT)
@@ -214,6 +314,8 @@ class MonsterPortrait(QLabel):
     def paintEvent(self, _e) -> None:  # noqa: N802
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
         s = self._size
         meta = ELEMENTS[self._element]
@@ -274,41 +376,53 @@ class MonsterPortrait(QLabel):
         p.setClipping(False)
         p.restore()
 
-        # Element badge top-right
-        badge_r = max(9, int(s * 0.22 / 2))
-        bx = s - badge_r * 2 - 4
-        by = 4
-        p.setBrush(QBrush(el_color))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.drawEllipse(bx, by, badge_r * 2, badge_r * 2)
-        font = QFont(theme.D.FONT_UI)
-        font.setPointSizeF(max(6.5, s * 0.095))
-        font.setBold(True)
-        p.setFont(font)
-        p.setPen(QColor(theme.D.BG))
-        p.drawText(
-            QRectF(bx, by, badge_r * 2, badge_r * 2),
-            Qt.AlignmentFlag.AlignCenter,
-            meta.label[0],
-        )
+        # Element icon bottom-left (real SW PNG from assets/swarfarm/elements/)
+        el_icon_path = Path(theme.asset_element_icon(self._element))
+        el_size = max(14, int(s * 0.32))
+        ex = 2
+        ey = s - el_size - 2
+        if el_icon_path.is_file():
+            el_px = QPixmap(str(el_icon_path))
+            if not el_px.isNull():
+                dpr = self.devicePixelRatioF() or 1.0
+                target = max(1, int(round(el_size * dpr)))
+                scaled = el_px.scaled(
+                    target, target,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                scaled.setDevicePixelRatio(dpr)
+                p.drawPixmap(QPointF(ex, ey), scaled)
 
-        # Level pill bottom-left (only if monster is level > 0)
+        # Level label bottom-right — no background pill, just bold white text.
         if self._level > 0:
-            txt = f"lv{self._level}"
-            pad_h = 4
-            pill_h = max(12, int(s * 0.20))
+            txt = f"Lv.{self._level}"
             mfont = QFont(theme.D.FONT_MONO)
-            mfont.setPointSizeF(max(6.5, s * 0.12))
+            mfont.setPixelSize(max(11, int(s * 0.20)))
             mfont.setBold(True)
             p.setFont(mfont)
             fm = p.fontMetrics()
-            tw = fm.horizontalAdvance(txt) + pad_h * 2
-            px = 4
-            py = s - pill_h - 4
-            p.setBrush(QBrush(QColor(0, 0, 0, int(0.60 * 255))))
-            p.drawRoundedRect(QRectF(px, py, tw, pill_h), 4, 4)
-            p.setPen(QColor(theme.D.FG))
-            p.drawText(QRectF(px, py, tw, pill_h), Qt.AlignmentFlag.AlignCenter, txt)
+            tw = fm.horizontalAdvance(txt)
+            th = fm.height()
+            px = s - tw - 4
+            py = s - th - 2
+            # Build the glyph path so we can stroke a black halo around
+            # the white fill for a depth / embossed effect on bright art.
+            path = QPainterPath()
+            path.addText(QPointF(px, py + fm.ascent()), mfont, txt)
+            p.save()
+            p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            outline = QPen(QColor(0, 0, 0, 210))
+            outline.setWidthF(2.5)
+            outline.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            outline.setCapStyle(Qt.PenCapStyle.RoundCap)
+            p.setPen(outline)
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawPath(path)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(theme.D.FG))
+            p.drawPath(path)
+            p.restore()
 
         # Element-tinted 1.5px border
         pen = QPen(QColor(el_color.red(), el_color.green(), el_color.blue(), int(0.33 * 255)))
@@ -316,4 +430,16 @@ class MonsterPortrait(QLabel):
         p.setPen(pen)
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawRoundedRect(rect.adjusted(0.75, 0.75, -0.75, -0.75), radius, radius)
+
+        # Stars overlaid at the TOP edge of the portrait, drawn with
+        # QPainterPath for crisp vector shapes. Overlap mimics the
+        # Summoners War nameplate layering.
+        if self._stars > 0:
+            _draw_stars(
+                p, self._stars,
+                cx=s / 2, cy=max(6, int(s * 0.14)),
+                star_r=max(4.5, s * 0.095),
+                color=QColor(theme.D.ACCENT),
+                overlap=0.45,
+            )
         p.end()

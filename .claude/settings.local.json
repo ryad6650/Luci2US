@@ -108,7 +108,10 @@
       "Bash(./realesrgan-ncnn-vulkan.exe -i C:/Users/louis/Luci2US/assets/monsters/__TRACKED_VAR__ -o C:/Users/louis/Luci2US/_hd_demo/hd___TRACKED_VAR__ -n realesrgan-x4plus-anime -s 4)",
       "Bash(grep -cE \"^unit_icon_.*\\\\.png$\")",
       "Bash(powershell *)",
-      "Bash(LUCI2US_START_PAGE=runes python scan_app.py)"
+      "Bash(LUCI2US_START_PAGE=runes python scan_app.py)",
+      "Bash(LUCI2US_START_PAGE=monsters python scan_app.py)",
+      "Bash(taskkill /F /IM python.exe)",
+      "Bash(taskkill *)"
     ]
   }
 }

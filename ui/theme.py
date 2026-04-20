@@ -70,6 +70,11 @@ def asset_icon(name: str) -> str:
     return os.path.join(_ASSETS, "icons", f"{name}.png")
 
 
+def asset_element_icon(name_en: str) -> str:
+    """'fire' | 'water' | 'wind' | 'light' | 'dark' -> absolute path."""
+    return os.path.join(_ASSETS, "elements", f"{name_en.lower()}.png")
+
+
 def set_asset_name(set_fr: str) -> str:
     """Map a French set name from models.SET_FR_TO_EN to its asset filename (lowercase English)."""
     en = SET_FR_TO_EN.get(set_fr, set_fr)
@@ -119,6 +124,38 @@ class D:
     # Shell sizes
     TITLEBAR_H  = 36
     SIDEBAR_W   = 188
+
+
+# ── Gold palette (Monsters page — maquette monstres sw.png) ──────────────
+# Brown/gold palette used by the Monsters page only, to match the in-game
+# Summoners War "Rune Forge" aesthetic. Do NOT use on Scan/Runes/etc.
+class GOLD:
+    BG          = "#14100a"     # page bg (deep brown)
+    BG_2        = "#1c150d"     # sub bg
+    PANEL       = "#221a10"     # cards / side panel background
+    PANEL_HI    = "#2a1f13"     # hovered / nested panels
+    SIDEBAR_BG  = "#0d0a06"
+
+    BORDER      = "#4a351c"     # default border
+    BORDER_HI   = "#7a5628"     # stronger border (selected card, focus)
+    BORDER_DIM  = "#33261a"     # subtle separators
+
+    GOLD        = "#e8b040"     # primary accent (titles, active pills)
+    GOLD_HI     = "#f5c860"
+    GOLD_DIM    = "rgba(232,176,64,0.14)"
+    BRONZE      = "#c67032"
+
+    FG          = "#f0e6d0"
+    FG_DIM      = "#c8b38a"
+    FG_MUTE     = "#8a7455"
+
+    OK          = "#9cc848"     # keep green (evaluation high)
+    WARN        = "#f5a030"
+    ERR         = "#d84a3a"
+
+    FONT_UI     = "Segoe UI"
+    FONT_MONO   = "JetBrains Mono"
+    FONT_TITLE  = "Georgia"
 
 
 # Colours by rune set (for RuneGlyph placeholder tint + header accents).

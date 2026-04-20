@@ -31,7 +31,7 @@ CARD_H = 266
 
 _RARITY_BORDER = {
     "Legendaire": "#f5c16e",
-    "Heroique":   "#7ba6ff",
+    "Heroique":   "#ED8DED",
     "Rare":       "#5aa0d8",
     "Magique":    "#8ec44a",
     "Normal":     "#6a6a72",
@@ -129,7 +129,13 @@ class RuneCardWidget(QFrame):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(8)
 
-        portrait = RunePortraitWithLevel(size=58, level=f"+{self._rune.level}")
+        rarity_color = _RARITY_BORDER.get(self._rune.grade)
+        portrait = RunePortraitWithLevel(
+            size=58,
+            level=f"+{self._rune.level}",
+            border_color=rarity_color,
+            rarity=self._rune.grade,
+        )
         path = theme.asset_set_logo(theme.set_asset_name(self._rune.set))
         if path and os.path.isfile(path):
             portrait.set_pixmap(QPixmap(path))

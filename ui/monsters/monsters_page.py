@@ -11,16 +11,18 @@ contract so main_window can feed it like the other pages.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QSize, QTimer
+from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (
-    QButtonGroup, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+    QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
 from models import Monster, Rune
 from s2us_filter import calculate_efficiency_s2us
 from ui import theme
-from ui.monsters.elements import ELEMENTS, element_key, hex_alpha
+G = theme.D
+from ui.monsters.elements import ELEMENTS, element_key, hex_alpha, make_star_pixmap
 from ui.monsters.monster_card import (
     MonsterCard, MonsterTableHeader, MonsterTableRow,
 )
@@ -60,16 +62,20 @@ def _equipped_count(mon: Monster) -> int:
 
 # ── Pill toggle button ────────────────────────────────────────────────────
 class _PillButton(QPushButton):
-    """Shared pill used by Grid/Table toggle and status/element filters."""
+    """Shared pill used by status/element filters."""
 
     def __init__(self, key: str, label: str, kind: str = "default", parent=None) -> None:
         super().__init__(label, parent)
         self.key = key
         self._kind = kind
         self._el_color: str | None = None
+        # WA_StyledBackground forces QSS to fully control the button's paint,
+        # otherwise the native Windows style leaks a square frame on QPushButton
+        # even when border-radius is set — causing pills to look rectangular.
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setCheckable(True)
-        self.setFixedHeight(26)
+        self.setFixedHeight(28)
         self._apply(False)
 
     def set_element_color(self, color: str) -> None:
@@ -81,66 +87,39 @@ class _PillButton(QPushButton):
         self._apply(active)
 
     def _apply(self, active: bool) -> None:
-        if self._kind == "view" and active:
-            # Grid/Table toggle — active is filled magenta, black text.
-            self.setStyleSheet(
-                f"""
-                QPushButton {{
-                    background:{theme.D.ACCENT}; color:{theme.D.BG};
-                    border:none; border-radius:999px;
-                    padding:0 14px;
-                    font-family:'{theme.D.FONT_UI}';
-                    font-size:11px; font-weight:600;
-                }}
-                """
-            )
-            return
-
         if self._kind == "element" and active and self._el_color:
             bg = hex_alpha(self._el_color, "22")
             fg = self._el_color
+            border = hex_alpha(self._el_color, "80")
         elif active:
-            bg = theme.D.ACCENT_DIM
-            fg = theme.D.ACCENT
+            bg = G.ACCENT_DIM
+            fg = G.ACCENT
+            border = G.ACCENT
         else:
-            bg = "transparent"
-            fg = theme.D.FG_DIM if self._kind != "element" else theme.D.FG_MUTE
+            bg = "rgba(0,0,0,0.25)"
+            if self._kind == "element":
+                fg = G.FG_MUTE
+            elif self._kind == "star":
+                fg = G.ACCENT   # star pills use the accent colour
+            else:
+                fg = G.FG_DIM
+            border = G.BORDER
 
         self.setStyleSheet(
             f"""
             QPushButton {{
                 background:{bg}; color:{fg};
-                border:none; border-radius:999px;
-                padding:0 11px;
-                font-family:'{theme.D.FONT_UI}';
+                border:1px solid {border}; border-radius:14px;
+                padding:2px 12px;
+                font-family:'{G.FONT_UI}';
                 font-size:11px; font-weight:600;
             }}
-            QPushButton:hover {{ background:{theme.D.ACCENT_DIM}; color:{theme.D.ACCENT}; }}
-            """
-        )
-
-
-class _PillGroup(QFrame):
-    """Rounded background holding pill buttons — matches the handoff segmented control."""
-
-    def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-        self.setObjectName("PillGroup")
-        self.setStyleSheet(
-            f"""
-            #PillGroup {{
-                background: rgba(255,255,255,0.03);
-                border: 1px solid {theme.D.BORDER};
-                border-radius: 999px;
+            QPushButton:hover {{
+                background:{G.ACCENT_DIM}; color:{G.ACCENT};
+                border:1px solid {G.ACCENT};
             }}
             """
         )
-        self._lay = QHBoxLayout(self)
-        self._lay.setContentsMargins(3, 3, 3, 3)
-        self._lay.setSpacing(2)
-
-    def add(self, widget: QPushButton) -> None:
-        self._lay.addWidget(widget)
 
 
 # ── Main page ─────────────────────────────────────────────────────────────
@@ -149,9 +128,7 @@ class MonstersPage(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setStyleSheet(
-            f"MonstersPage {{ background: transparent; color:{theme.D.FG}; }}"
-        )
+        self.setStyleSheet(f"MonstersPage {{ color:{G.FG}; }}")
 
         # ── State ─────────────────────────────────────────────────
         self._all_monsters: list[Monster] = []
@@ -160,6 +137,7 @@ class MonstersPage(QWidget):
         self._sort_by: str = "efficiency"
         self._filter_element: str | None = None   # element key ('fire', ...)
         self._filter_equipped: str = "all"     # 'all' | 'equipped' | 'empty'
+        self._filter_stars: set[int] = set()   # {1..6}, empty = no filter
         self._search: str = ""
         self._selected: Monster | None = None
 
@@ -172,30 +150,43 @@ class MonstersPage(QWidget):
         self._detail_modal: MonsterDetailModal | None = None
 
         # ── Layout skeleton ──────────────────────────────────────
-        outer = QVBoxLayout(self)
+        # Root is H-split so the side panel (Infos Générales) spans the
+        # FULL height of the page, from title-bar to bottom.
+        outer = QHBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
-        outer.addWidget(self._build_header())
-        outer.addWidget(self._build_toolbar())
+        left_col = QWidget()
+        left_lay = QVBoxLayout(left_col)
+        left_lay.setContentsMargins(0, 0, 0, 0)
+        left_lay.setSpacing(0)
 
-        # Body split: list + side panel
+        left_lay.addWidget(self._build_header())
+        left_lay.addWidget(self._h_separator())
+        left_lay.addWidget(self._build_toolbar())
+
+        # List area (grid/table) below the toolbar
         body = QWidget()
         body_lay = QHBoxLayout(body)
-        body_lay.setContentsMargins(28, 0, 28, 20)
-        body_lay.setSpacing(16)
+        # No right margin so the grid extends up to the side-panel separator.
+        body_lay.setContentsMargins(24, 4, 0, 16)
+        body_lay.setSpacing(0)
 
         self._list_area = QScrollArea()
         self._list_area.setWidgetResizable(True)
         self._list_area.setFrameShape(QFrame.Shape.NoFrame)
+        # Transparent viewport so the page's brown background shows through
+        # behind the monster cards.
+        self._list_area.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self._list_area.viewport().setAutoFillBackground(False)
         self._list_area.setStyleSheet(
-            """
-            QScrollArea { background:transparent; }
-            QScrollBar:vertical { width:6px; background:transparent; margin:6px; }
-            QScrollBar::handle:vertical {
-                background:rgba(240,104,154,0.25); border-radius:3px;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height:0; }
+            f"""
+            QScrollArea, QScrollArea > QWidget > QWidget {{ background:transparent; }}
+            QScrollBar:vertical {{ width:6px; background:transparent; margin:6px; }}
+            QScrollBar::handle:vertical {{
+                background:rgba(240,104,154,0.40); border-radius:3px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height:0; }}
             """
         )
 
@@ -204,8 +195,8 @@ class MonstersPage(QWidget):
         self._grid_widget = QWidget()
         self._grid_layout = QGridLayout(self._grid_widget)
         self._grid_layout.setContentsMargins(0, 0, 0, 0)
-        self._grid_layout.setHorizontalSpacing(12)
-        self._grid_layout.setVerticalSpacing(12)
+        self._grid_layout.setHorizontalSpacing(6)
+        self._grid_layout.setVerticalSpacing(6)
         self._grid_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self._table_widget = QFrame()
@@ -213,8 +204,8 @@ class MonstersPage(QWidget):
         self._table_widget.setStyleSheet(
             f"""
             #MonsterTable {{
-                background:{theme.D.PANEL};
-                border:1px solid {theme.D.BORDER};
+                background:{G.PANEL};
+                border:1px solid {G.BORDER};
                 border-radius:12px;
             }}
             """
@@ -233,11 +224,16 @@ class MonstersPage(QWidget):
         self._list_area.setWidget(self._grid_widget)
         body_lay.addWidget(self._list_area, 1)
 
+        left_lay.addWidget(body, 1)
+        outer.addWidget(left_col, 1)
+
+        # Vertical separator between list area and side panel
+        outer.addWidget(self._v_separator())
+
         self._side_panel = MonsterSidePanel()
         self._side_panel.open_detail_clicked.connect(self._open_detail)
-        body_lay.addWidget(self._side_panel, 0, Qt.AlignmentFlag.AlignTop)
-
-        outer.addWidget(body, 1)
+        # Full height: panel spans from title bar to bottom of the page.
+        outer.addWidget(self._side_panel)
 
         # Debounce the search input by 150ms (handoff recommends it).
         self._search_timer = QTimer(self)
@@ -253,162 +249,202 @@ class MonstersPage(QWidget):
 
     # ── Header build ──────────────────────────────────────────────────
     def _build_header(self) -> QWidget:
+        """Header mirrors `monstres sw.png`: big 'Monstres' title on the left,
+        inline Filter/Sort/Search controls on the right."""
         header = QWidget()
         lay = QHBoxLayout(header)
-        lay.setContentsMargins(28, 22, 28, 14)
+        lay.setContentsMargins(24, 18, 24, 10)
         lay.setSpacing(14)
-
-        left = QVBoxLayout()
-        left.setSpacing(3)
-        eyebrow = QLabel("COLLECTION")
-        eyebrow.setStyleSheet(
-            f"color:{theme.D.ACCENT}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:11px; font-weight:600; letter-spacing:1.5px;"
-        )
-        left.addWidget(eyebrow)
 
         title = QLabel("Monstres")
         title.setStyleSheet(
-            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:24px; font-weight:600; letter-spacing:-0.5px;"
+            f"color:{G.FG}; font-family:'{G.FONT_UI}';"
+            f"font-size:22px; font-weight:700; letter-spacing:-0.3px;"
         )
-        left.addWidget(title)
+        lay.addWidget(title, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._counter = QLabel("")
         self._counter.setTextFormat(Qt.TextFormat.RichText)
         self._counter.setStyleSheet(
-            f"color:{theme.D.FG_DIM}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:12px;"
+            f"color:{G.FG_DIM}; font-family:'{G.FONT_UI}';"
+            f"font-size:11px; padding-left:10px;"
         )
-        left.addWidget(self._counter)
-        lay.addLayout(left, 1)
-
-        # Grid/Table toggle
-        toggle_group = _PillGroup()
-        self._view_btns: dict[str, _PillButton] = {}
-        self._view_group = QButtonGroup(self)
-        self._view_group.setExclusive(True)
-        for key, label in (("grid", "Grille"), ("table", "Tableau")):
-            b = _PillButton(key, label, kind="view")
-            b.clicked.connect(lambda _c=False, k=key: self._set_view(k))
-            toggle_group.add(b)
-            self._view_btns[key] = b
-            self._view_group.addButton(b)
-        self._view_btns["grid"].set_active(True)
-        lay.addWidget(toggle_group, 0, Qt.AlignmentFlag.AlignBottom)
-
-        return header
-
-    # ── Toolbar build ─────────────────────────────────────────────────
-    def _build_toolbar(self) -> QWidget:
-        bar = QWidget()
-        lay = QHBoxLayout(bar)
-        lay.setContentsMargins(28, 0, 28, 14)
-        lay.setSpacing(10)
-
-        # Search
-        search_wrap = QFrame()
-        search_wrap.setObjectName("SearchBox")
-        search_wrap.setStyleSheet(
-            f"""
-            #SearchBox {{
-                background: rgba(255,255,255,0.03);
-                border: 1px solid {theme.D.BORDER};
-                border-radius: 8px;
-            }}
-            """
-        )
-        sl = QHBoxLayout(search_wrap)
-        sl.setContentsMargins(12, 7, 12, 7)
-        sl.setSpacing(8)
-        loupe = QLabel("⌕")
-        loupe.setStyleSheet(
-            f"color:{theme.D.FG_MUTE}; font-size:14px;"
-        )
-        sl.addWidget(loupe, 0, Qt.AlignmentFlag.AlignVCenter)
-        self._search_input = QLineEdit()
-        self._search_input.setPlaceholderText("Rechercher un monstre…")
-        self._search_input.setStyleSheet(
-            f"""
-            QLineEdit {{
-                background:transparent; border:none;
-                color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';
-                font-size:12px; selection-background-color:{theme.D.ACCENT_DIM};
-            }}
-            """
-        )
-        self._search_input.textChanged.connect(self._on_search_changed)
-        sl.addWidget(self._search_input, 1)
-        search_wrap.setMinimumWidth(240)
-        lay.addWidget(search_wrap)
-
-        # Element filter chips
-        el_group = _PillGroup()
-        self._element_btns: dict[str | None, _PillButton] = {}
-        all_btn = _PillButton("", "Tous", kind="default")
-        all_btn.clicked.connect(lambda: self._set_element(None))
-        el_group.add(all_btn)
-        self._element_btns[None] = all_btn
-        all_btn.set_active(True)
-        for key, meta in ELEMENTS.items():
-            b = _PillButton(key, meta.label, kind="element")
-            b.set_element_color(meta.color)
-            b.clicked.connect(lambda _c=False, k=key: self._toggle_element(k))
-            el_group.add(b)
-            self._element_btns[key] = b
-        lay.addWidget(el_group)
-
-        # Equipped filter chips
-        eq_group = _PillGroup()
-        self._equipped_btns: dict[str, _PillButton] = {}
-        for key, label in (("all", "Tous"), ("equipped", "Runés"), ("empty", "Vides")):
-            b = _PillButton(key, label, kind="default")
-            b.clicked.connect(lambda _c=False, k=key: self._set_equipped(k))
-            eq_group.add(b)
-            self._equipped_btns[key] = b
-        self._equipped_btns["all"].set_active(True)
-        lay.addWidget(eq_group)
-
+        lay.addWidget(self._counter, 0, Qt.AlignmentFlag.AlignVCenter)
         lay.addStretch(1)
 
-        # Sort
-        sort_lbl = QLabel("Trier :")
-        sort_lbl.setStyleSheet(
-            f"color:{theme.D.FG_DIM}; font-family:'{theme.D.FONT_UI}'; font-size:11px;"
-        )
-        lay.addWidget(sort_lbl)
+        # Equipped combo ("Filter ▼" in maquette)
+        self._equipped_combo = QComboBox()
+        for key, label in (("all", "Filtrer"), ("equipped", "Runés"), ("empty", "Vides")):
+            self._equipped_combo.addItem(label, userData=key)
+        self._equipped_combo.setCurrentIndex(0)
+        self._equipped_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._equipped_combo.setStyleSheet(self._combo_qss())
+        self._equipped_combo.currentIndexChanged.connect(self._on_equipped_changed)
+        lay.addWidget(self._equipped_combo, 0, Qt.AlignmentFlag.AlignVCenter)
 
+        # Sort combo
         self._sort_combo = QComboBox()
         for key, label in SORT_LABELS.items():
             self._sort_combo.addItem(label, userData=key)
         self._sort_combo.setCurrentIndex(0)
         self._sort_combo.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._sort_combo.setStyleSheet(
+        self._sort_combo.setStyleSheet(self._combo_qss())
+        self._sort_combo.currentIndexChanged.connect(self._on_sort_changed)
+        lay.addWidget(self._sort_combo, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        # Search (inline, compact)
+        search_wrap = QFrame()
+        search_wrap.setObjectName("SearchBox")
+        search_wrap.setStyleSheet(
             f"""
-            QComboBox {{
-                background: rgba(255,255,255,0.03);
-                border: 1px solid {theme.D.BORDER};
-                border-radius: 8px;
-                color: {theme.D.FG};
-                font-family:'{theme.D.FONT_UI}'; font-size:12px;
-                padding: 5px 28px 5px 10px;
-                min-height: 20px;
-            }}
-            QComboBox::drop-down {{ border:none; width: 20px; }}
-            QComboBox QAbstractItemView {{
-                background: #1a0f14;
-                color: {theme.D.FG};
-                border: 1px solid {theme.D.BORDER};
-                selection-background-color: {theme.D.ACCENT_DIM};
-                selection-color: {theme.D.ACCENT};
-                outline: 0;
+            #SearchBox {{
+                background: rgba(0,0,0,0.20);
+                border: 1px solid {G.BORDER};
+                border-radius: 6px;
             }}
             """
         )
-        self._sort_combo.currentIndexChanged.connect(self._on_sort_changed)
-        lay.addWidget(self._sort_combo)
+        sl = QHBoxLayout(search_wrap)
+        sl.setContentsMargins(10, 4, 10, 4)
+        sl.setSpacing(6)
+        loupe = QLabel("⌕")
+        loupe.setStyleSheet(f"color:{G.FG_MUTE}; font-size:13px;")
+        sl.addWidget(loupe, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._search_input = QLineEdit()
+        self._search_input.setPlaceholderText("Rechercher…")
+        self._search_input.setFixedWidth(180)
+        self._search_input.setStyleSheet(
+            f"""
+            QLineEdit {{
+                background:transparent; border:none;
+                color:{G.FG}; font-family:'{G.FONT_UI}';
+                font-size:11px; selection-background-color:{G.ACCENT_DIM};
+            }}
+            """
+        )
+        self._search_input.textChanged.connect(self._on_search_changed)
+        sl.addWidget(self._search_input, 1)
+        lay.addStretch(1)
+        lay.addWidget(search_wrap, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        return header
+
+    def _combo_qss(self) -> str:
+        return (
+            f"QComboBox {{"
+            f"  background: rgba(0,0,0,0.20); border: 1px solid {G.BORDER};"
+            f"  border-radius: 6px; color: {G.FG};"
+            f"  font-family:'{G.FONT_UI}'; font-size:11px;"
+            f"  padding: 4px 24px 4px 10px; min-height: 18px;"
+            f"}}"
+            f"QComboBox::drop-down {{ border:none; width: 18px; }}"
+            f"QComboBox QAbstractItemView {{"
+            f"  background:{G.PANEL}; color:{G.FG}; border:1px solid {G.BORDER};"
+            f"  selection-background-color:{G.ACCENT_DIM};"
+            f"  selection-color:{G.ACCENT}; outline:0;"
+            f"}}"
+        )
+
+    def _on_equipped_changed(self, _idx: int) -> None:
+        key = self._equipped_combo.currentData() or "all"
+        self._filter_equipped = key
+        self._refilter()
+
+    def _h_separator(self) -> QFrame:
+        """Thin horizontal line between header block and toolbar."""
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.NoFrame)
+        line.setFixedHeight(1)
+        line.setStyleSheet(f"background:{G.BORDER}; border:none;")
+        return line
+
+    def _v_separator(self) -> QFrame:
+        """Thin vertical line between list area and side panel."""
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.NoFrame)
+        line.setFixedWidth(1)
+        line.setStyleSheet(f"background:{G.BORDER}; border:none;")
+        return line
+
+    # ── Toolbar build ─────────────────────────────────────────────────
+    def _build_toolbar(self) -> QWidget:
+        """Toolbar mirrors `monstres sw.png`:
+        - "Élément" label then a row of individual rounded element pills
+        - "Étoiles" label then a row of individual rounded star pills
+        Each pill is an independent rounded card — no segmented container.
+        """
+        bar = QWidget()
+        outer = QVBoxLayout(bar)
+        outer.setContentsMargins(24, 6, 24, 10)
+        outer.setSpacing(10)
+
+        # ── Row 1: Element + Star Rating (labels above) ─────────────
+        el_col = QVBoxLayout()
+        el_col.setSpacing(4)
+        el_col.addWidget(self._section_label("Élément"))
+        el_row = QHBoxLayout()
+        el_row.setContentsMargins(0, 0, 0, 0)
+        el_row.setSpacing(6)
+
+        self._element_btns: dict[str | None, _PillButton] = {}
+        all_btn = _PillButton("", "All", kind="default")
+        all_btn.setFixedHeight(28)
+        all_btn.clicked.connect(lambda: self._set_element(None))
+        self._element_btns[None] = all_btn
+        all_btn.set_active(True)
+        el_row.addWidget(all_btn)
+
+        for key, meta in ELEMENTS.items():
+            b = _PillButton(key, meta.label, kind="element")
+            b.setFixedHeight(28)
+            b.set_element_color(meta.color)
+            icon_path = theme.asset_element_icon(key)
+            b.setIcon(QIcon(icon_path))
+            b.setIconSize(QSize(16, 16))
+            b.clicked.connect(lambda _c=False, k=key: self._toggle_element(k))
+            el_row.addWidget(b)
+            self._element_btns[key] = b
+        el_row.addStretch(1)
+        el_col.addLayout(el_row)
+
+        star_col = QVBoxLayout()
+        star_col.setSpacing(4)
+        star_col.addWidget(self._section_label("Étoiles"))
+        star_row = QHBoxLayout()
+        star_row.setContentsMargins(0, 0, 0, 0)
+        star_row.setSpacing(6)
+
+        self._star_btns: dict[int, _PillButton] = {}
+        # Vector star icon (crisp at all DPIs — the text ★ glyph looked pixelated).
+        star_icon = QIcon(make_star_pixmap(14, QColor(G.ACCENT)))
+        # Maquette shows 1, 2, 3, 4, 6 — no 5★ pill.
+        for n in (1, 2, 3, 4, 6):
+            b = _PillButton(str(n), f"  {n}", kind="star")
+            b.setIcon(star_icon)
+            b.setIconSize(QSize(14, 14))
+            b.setFixedHeight(28)
+            b.clicked.connect(lambda _c=False, s=n: self._toggle_star(s))
+            star_row.addWidget(b)
+            self._star_btns[n] = b
+        star_row.addStretch(1)
+        star_col.addLayout(star_row)
+
+        row1 = QHBoxLayout()
+        row1.setContentsMargins(0, 0, 0, 0)
+        row1.setSpacing(24)
+        row1.addLayout(el_col, 1)
+        row1.addLayout(star_col, 0)
+        outer.addLayout(row1)
 
         return bar
+
+    def _section_label(self, text: str) -> QLabel:
+        lbl = QLabel(text)
+        lbl.setStyleSheet(
+            f"color:{G.FG_DIM}; font-family:'{G.FONT_UI}';"
+            f"font-size:11px; font-weight:600; letter-spacing:0.4px;"
+        )
+        return lbl
 
     # ── Public API ────────────────────────────────────────────────────
     def apply_profile(self, profile: dict, saved_at) -> None:
@@ -422,14 +458,6 @@ class MonstersPage(QWidget):
         self._refilter()
 
     # ── State setters ─────────────────────────────────────────────────
-    def _set_view(self, view: str) -> None:
-        if view == self._view:
-            return
-        self._view = view
-        for k, b in self._view_btns.items():
-            b.set_active(k == view)
-        self._rebuild_list()
-
     def _set_element(self, key: str | None) -> None:
         self._filter_element = key
         for k, b in self._element_btns.items():
@@ -445,8 +473,24 @@ class MonstersPage(QWidget):
 
     def _set_equipped(self, key: str) -> None:
         self._filter_equipped = key
-        for k, b in self._equipped_btns.items():
-            b.set_active(k == key)
+        # mirror to combo if mounted
+        combo = getattr(self, "_equipped_combo", None)
+        if combo is not None:
+            for i in range(combo.count()):
+                if combo.itemData(i) == key:
+                    combo.blockSignals(True)
+                    combo.setCurrentIndex(i)
+                    combo.blockSignals(False)
+                    break
+        self._refilter()
+
+    def _toggle_star(self, star: int) -> None:
+        if star in self._filter_stars:
+            self._filter_stars.discard(star)
+        else:
+            self._filter_stars.add(star)
+        for n, b in self._star_btns.items():
+            b.set_active(n in self._filter_stars)
         self._refilter()
 
     def _on_search_changed(self, text: str) -> None:
@@ -468,6 +512,8 @@ class MonstersPage(QWidget):
             if self._filter_equipped == "equipped" and not eq:
                 continue
             if self._filter_equipped == "empty" and eq:
+                continue
+            if self._filter_stars and int(m.stars) not in self._filter_stars:
                 continue
             if self._search and self._search not in m.name.lower():
                 continue
@@ -496,7 +542,7 @@ class MonstersPage(QWidget):
         shown = len(self._filtered)
         nat6 = sum(1 for m in self._all_monsters if m.stars >= 6)
         self._counter.setText(
-            f"<span style='color:{theme.D.FG}; font-family:\"{theme.D.FONT_MONO}\";'>"
+            f"<span style='color:{G.FG}; font-family:\"{G.FONT_MONO}\";'>"
             f"{shown}</span> sur {total} · {nat6} nat 6★"
         )
 
@@ -519,7 +565,7 @@ class MonstersPage(QWidget):
             if self._list_area.widget() is not self._grid_widget:
                 self._list_area.takeWidget()
                 self._list_area.setWidget(self._grid_widget)
-            cols = max(1, min(5, (self._list_area.viewport().width() or 900) // 232))
+            cols = max(1, (self._list_area.viewport().width() or 900) // 76)
             self._grid_cols = cols
             for idx, m in enumerate(self._filtered):
                 card = MonsterCard(
@@ -553,7 +599,7 @@ class MonstersPage(QWidget):
         # Reflow grid columns on resize, but only when the column count
         # actually changes — otherwise rebuilding thrashes layout every pixel.
         if self._view == "grid" and self._grid_cards:
-            cols = max(1, min(5, (self._list_area.viewport().width() or 900) // 232))
+            cols = max(1, (self._list_area.viewport().width() or 900) // 76)
             if cols != getattr(self, "_grid_cols", cols):
                 self._rebuild_list()
 

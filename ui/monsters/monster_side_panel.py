@@ -1,82 +1,189 @@
-"""Side panel shown on the right of the monsters list.
+"""Right-side "General Info" panel for the Monsters page.
 
-Summarises the selected monster: portrait 88, name, stars, chip row,
-6 dashed rune slot markers, four base stats, average efficiency and a
-magenta CTA that opens the detail modal.
+Layout based strictly on `monstres sw.png` maquette (gold/brown palette):
+
+    General Info (eyebrow)
+    ┌──────────────────────────────────┐   Attack (title)
+    │        PORTRAIT (big)            │   Attack | Defense (subtitle)
+    └──────────────────────────────────┘
+    Stats list  (HP / ATK / DEF / SPD /
+                 CRI Rate / CRI Dmg /
+                 Resistance / Accuracy)
+    Skills       (4 icon tiles)
+    Rune Recommendations  (3 cells: set + 2/4/6 hint)
+    Evaluation Score      (3 big numbers: Arena / GvG / Donjons)
+    User Notes            (QTextEdit)
 """
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QFrame, QGridLayout, QHBoxLayout, QLabel, QScrollArea, QSizePolicy,
+    QTextEdit, QVBoxLayout, QWidget,
 )
 
 from models import Monster
 from ui import theme
-from ui.monsters.elements import (
-    ElementChip, MonsterPortrait, Stars, hex_alpha,
-)
+from ui.monsters.elements import ElementChip, MonsterPortrait, Stars, element_meta
+
+G = theme.D
 
 
-def _section_label(text: str) -> QLabel:
+# ── Helpers ───────────────────────────────────────────────────────────────
+def _eyebrow(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setStyleSheet(
-        f"color:{theme.D.FG_MUTE}; font-family:'{theme.D.FONT_UI}';"
-        f"font-size:10px; font-weight:700; letter-spacing:1px;"
+        f"color:{G.ACCENT}; font-family:'{G.FONT_UI}';"
+        f"font-size:10px; font-weight:700; letter-spacing:1.6px;"
         f"background:transparent; border:none;"
     )
     return lbl
 
 
-def _hline() -> QFrame:
-    sep = QFrame()
-    sep.setFixedHeight(1)
-    sep.setStyleSheet(f"background:{theme.D.BORDER}; border:none;")
-    return sep
+def _format_stat(val: int | None, percent: bool = False) -> str:
+    if val is None:
+        return "—"
+    if percent:
+        return f"{val}%"
+    return f"{val:,}".replace(",", "\u00A0")
 
 
-class _RuneSlotMarker(QLabel):
-    """One of the six dashed squares displayed in the side panel."""
+def _name_seed(name: str) -> int:
+    h = 0
+    for ch in name:
+        h = ((h << 5) - h + ord(ch)) & 0xFFFFFFFF
+    return h
 
-    def __init__(self, slot: int, filled: bool, parent=None) -> None:
-        super().__init__(str(slot), parent)
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setFixedHeight(36)
-        self.setMinimumWidth(28)
-        self.setSizePolicy(
-            self.sizePolicy().horizontalPolicy(),
-            self.sizePolicy().verticalPolicy(),
-        )
-        if filled:
-            color = theme.D.ACCENT
-            bg = theme.D.ACCENT_DIM
-            border_color = hex_alpha(theme.D.ACCENT, "55")
-        else:
-            color = theme.D.FG_MUTE
-            bg = "transparent"
-            border_color = theme.D.BORDER
+
+# ── Sub-widgets ───────────────────────────────────────────────────────────
+class _SkillTile(QFrame):
+    """44x44 gold-accented placeholder for a skill icon."""
+
+    def __init__(self, glyph: str = "✦", parent=None) -> None:
+        super().__init__(parent)
+        self.setFixedSize(44, 44)
         self.setStyleSheet(
-            f"color:{color}; background:{bg};"
-            f"border:1px dashed {border_color}; border-radius:8px;"
-            f"font-family:'{theme.D.FONT_MONO}'; font-size:11px; font-weight:700;"
+            f"""
+            QFrame {{
+                background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+                    stop:0 rgba(232,176,64,0.22), stop:1 rgba(198,112,50,0.08));
+                border:1px solid {G.BORDER_STR};
+                border-radius:8px;
+            }}
+            QLabel {{
+                color:{G.ACCENT}; background:transparent; border:none;
+                font-family:'{G.FONT_UI}'; font-size:18px; font-weight:700;
+            }}
+            """
         )
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        g = QLabel(glyph)
+        g.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(g)
 
 
-class _LevelChip(QLabel):
-    def __init__(self, level: int, parent=None) -> None:
-        super().__init__(f"lv{level}", parent)
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+class _RuneRecoCell(QFrame):
+    """One rune slot recommendation card: set name / slots / hint."""
+
+    def __init__(self, set_name: str, slots: str, hint: str, parent=None) -> None:
+        super().__init__(parent)
         self.setStyleSheet(
-            f"padding:4px 10px; border-radius:999px;"
-            f"background:rgba(255,255,255,0.04);"
-            f"border:1px solid {theme.D.BORDER};"
-            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_MONO}';"
-            f"font-size:11px; font-weight:600;"
+            f"""
+            QFrame {{
+                background: {G.PANEL_2};
+                border:1px solid {G.BORDER};
+                border-radius:8px;
+            }}
+            """
         )
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(8, 8, 8, 8)
+        lay.setSpacing(2)
+
+        name = QLabel(set_name)
+        name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        name.setStyleSheet(
+            f"color:{G.ACCENT}; background:transparent; border:none;"
+            f"font-family:'{G.FONT_UI}'; font-size:11px; font-weight:700;"
+        )
+        lay.addWidget(name)
+
+        sl = QLabel(slots)
+        sl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sl.setStyleSheet(
+            f"color:{G.FG}; background:transparent; border:none;"
+            f"font-family:'{G.FONT_MONO}'; font-size:11px; font-weight:600;"
+        )
+        lay.addWidget(sl)
+
+        h = QLabel(hint)
+        h.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        h.setStyleSheet(
+            f"color:{G.FG_DIM}; background:transparent; border:none;"
+            f"font-family:'{G.FONT_UI}'; font-size:10px; font-weight:500;"
+        )
+        lay.addWidget(h)
 
 
+class _ScoreCell(QFrame):
+    """Big score number + label underneath."""
+
+    def __init__(self, score: str, label: str, tone: str = "gold", parent=None) -> None:
+        super().__init__(parent)
+        color = {
+            "gold":  G.ACCENT,
+            "ok":    G.OK,
+            "warn":  G.WARN,
+            "err":   G.ERR,
+        }.get(tone, G.ACCENT)
+
+        self.setStyleSheet(
+            f"""
+            QFrame {{
+                background: {G.PANEL_2};
+                border:1px solid {G.BORDER};
+                border-radius:8px;
+            }}
+            """
+        )
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(6, 10, 6, 10)
+        lay.setSpacing(2)
+
+        val = QLabel(score)
+        val.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        val.setStyleSheet(
+            f"color:{color}; background:transparent; border:none;"
+            f"font-family:'{G.FONT_MONO}'; font-size:22px; font-weight:700;"
+        )
+        lay.addWidget(val)
+
+        lbl = QLabel(label)
+        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl.setStyleSheet(
+            f"color:{G.FG_DIM}; background:transparent; border:none;"
+            f"font-family:'{G.FONT_UI}'; font-size:10px; font-weight:600;"
+        )
+        lay.addWidget(lbl)
+
+
+# ── Main side panel ───────────────────────────────────────────────────────
 class MonsterSidePanel(QFrame):
-    open_detail_clicked = Signal(object)   # emits the current Monster
+    # Signal kept for API compatibility with main_window / legacy callers;
+    # no CTA in the maquette, so it is never emitted automatically.
+    open_detail_clicked = Signal(object)
+
+    STATS: tuple[tuple[str, str, bool], ...] = (
+        ("HP",         "HP",    False),
+        ("ATK",        "ATK",   False),
+        ("DEF",        "DEF",   False),
+        ("SPD",        "SPD",   False),
+        ("Taux Crit",  "CRI R", True),
+        ("DGT Crit",   "CRI D", True),
+        ("Résistance", "RES",   False),
+        ("Précision",  "ACC",   False),
+    )
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -84,35 +191,56 @@ class MonsterSidePanel(QFrame):
         self._eff_avg: float = 0.0
         self._equipped_count: int = 0
         self._base_stats: dict[str, int] = {}
+        self._notes: dict[int, str] = {}   # id(monster) -> note
 
         self.setObjectName("SidePanel")
-        self.setFixedWidth(300)
+        self.setFixedWidth(330)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.setStyleSheet(
             f"""
             #SidePanel {{
-                background:{theme.D.PANEL};
-                border:1px solid {theme.D.BORDER};
+                background:{G.PANEL};
+                border:1px solid {G.BORDER};
                 border-radius:12px;
             }}
             """
         )
 
-        self._outer = QVBoxLayout(self)
-        self._outer.setContentsMargins(20, 20, 20, 20)
-        self._outer.setSpacing(16)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
 
-        self._empty_lbl = QLabel("Sélectionnez un monstre")
-        self._empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._empty_lbl.setStyleSheet(
-            f"color:{theme.D.FG_MUTE}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:12px;"
+        self._scroll = QScrollArea(self)
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll.setStyleSheet(
+            f"""
+            QScrollArea {{ background:transparent; border:none; }}
+            QScrollBar:vertical {{
+                width:8px; background:rgba(255,255,255,0.03); margin:4px 2px;
+                border-radius:4px;
+            }}
+            QScrollBar::handle:vertical {{
+                background:{G.ACCENT_2}; border-radius:3px; min-height:24px;
+            }}
+            QScrollBar::handle:vertical:hover {{ background:{G.ACCENT}; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height:0; }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background:transparent; }}
+            """
         )
-        self._outer.addStretch(1)
-        self._outer.addWidget(self._empty_lbl)
-        self._outer.addStretch(1)
+        self._body = QWidget()
+        self._body.setStyleSheet("background:transparent;")
+        self._body.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._body_lay = QVBoxLayout(self._body)
+        self._body_lay.setContentsMargins(16, 16, 16, 16)
+        self._body_lay.setSpacing(10)
+        self._scroll.setWidget(self._body)
+        outer.addWidget(self._scroll, 1)
 
-        # Will be populated by _build once a monster is set.
-        self._content: QWidget | None = None
+        self._notes_edit: QTextEdit | None = None
+        self._rebuild()
 
     # ── public API ────────────────────────────────────────────────────
     def set_monster(
@@ -122,6 +250,7 @@ class MonsterSidePanel(QFrame):
         equipped_count: int,
         base_stats: dict[str, int] | None = None,
     ) -> None:
+        self._capture_note()
         self._monster = monster
         self._eff_avg = eff_avg
         self._equipped_count = equipped_count
@@ -129,182 +258,209 @@ class MonsterSidePanel(QFrame):
         self._rebuild()
 
     # ── internals ─────────────────────────────────────────────────────
+    def _capture_note(self) -> None:
+        if self._notes_edit is None or self._monster is None:
+            return
+        self._notes[id(self._monster)] = self._notes_edit.toPlainText()
+
     def _clear(self) -> None:
-        while self._outer.count():
-            it = self._outer.takeAt(0)
+        while self._body_lay.count():
+            it = self._body_lay.takeAt(0)
             w = it.widget()
             if w is not None:
                 w.setParent(None)
                 w.deleteLater()
-        self._content = None
+            else:
+                inner = it.layout()
+                if inner is not None:
+                    _drop_layout(inner)
+        self._notes_edit = None
 
     def _rebuild(self) -> None:
         self._clear()
 
         if self._monster is None:
-            self._empty_lbl = QLabel("Sélectionnez un monstre")
-            self._empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._empty_lbl.setStyleSheet(
-                f"color:{theme.D.FG_MUTE}; font-family:'{theme.D.FONT_UI}';"
-                f"font-size:12px;"
+            empty = QLabel("Sélectionnez un monstre")
+            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty.setStyleSheet(
+                f"color:{G.FG_MUTE}; font-family:'{G.FONT_UI}';"
+                f"font-size:12px; padding:40px 0;"
             )
-            self._outer.addStretch(1)
-            self._outer.addWidget(self._empty_lbl)
-            self._outer.addStretch(1)
+            self._body_lay.addStretch(1)
+            self._body_lay.addWidget(empty)
+            self._body_lay.addStretch(1)
             return
 
         mon = self._monster
 
-        # ── top block: portrait + name + stars + chips ─────────────
-        top = QWidget()
-        top_lay = QVBoxLayout(top)
-        top_lay.setContentsMargins(0, 0, 0, 0)
-        top_lay.setSpacing(10)
-        top_lay.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        # 1. GENERAL INFO eyebrow
+        eye_row = QHBoxLayout()
+        eye_row.setContentsMargins(0, 0, 0, 0)
+        eye_row.addWidget(_eyebrow("INFOS GÉNÉRALES"))
+        eye_row.addStretch(1)
+        elem_badge = ElementChip(mon.element, size="sm")
+        eye_row.addWidget(elem_badge, 0, Qt.AlignmentFlag.AlignVCenter)
+        eye_wrap = QWidget()
+        eye_wrap.setLayout(eye_row)
+        self._body_lay.addWidget(eye_wrap)
 
-        portrait = MonsterPortrait(size=88)
-        portrait.set_monster(
+        # 2. Portrait big + title/subtitle on the right
+        hero_row = QHBoxLayout()
+        hero_row.setContentsMargins(0, 0, 0, 0)
+        hero_row.setSpacing(12)
+
+        big_portrait = MonsterPortrait(size=120)
+        big_portrait.set_monster(
             mon.element, mon.stars, mon.level, mon.unit_master_id,
             _name_seed(mon.name),
         )
-        top_lay.addWidget(portrait, 0, Qt.AlignmentFlag.AlignHCenter)
+        hero_row.addWidget(big_portrait, 0, Qt.AlignmentFlag.AlignTop)
 
-        name = QLabel(mon.name)
-        name.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        name.setStyleSheet(
-            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:16px; font-weight:600;"
+        title_col = QVBoxLayout()
+        title_col.setContentsMargins(0, 6, 0, 0)
+        title_col.setSpacing(4)
+
+        title = QLabel(mon.name)
+        title.setWordWrap(True)
+        title.setStyleSheet(
+            f"color:{G.ACCENT}; font-family:'{G.FONT_UI}';"
+            f"font-size:20px; font-weight:700;"
         )
-        top_lay.addWidget(name)
+        title_col.addWidget(title)
 
-        stars_wrap = QHBoxLayout()
-        stars_wrap.setContentsMargins(0, 0, 0, 0)
-        stars_wrap.addStretch(1)
-        stars_wrap.addWidget(Stars(mon.stars, size=13))
-        stars_wrap.addStretch(1)
-        top_lay.addLayout(stars_wrap)
+        subtitle = QLabel(_subtitle_for(mon))
+        subtitle.setStyleSheet(
+            f"color:{G.FG_DIM}; font-family:'{G.FONT_UI}';"
+            f"font-size:11px; font-weight:500;"
+        )
+        title_col.addWidget(subtitle)
 
-        chip_row = QHBoxLayout()
-        chip_row.setContentsMargins(0, 0, 0, 0)
-        chip_row.setSpacing(8)
-        chip_row.addStretch(1)
-        chip_row.addWidget(ElementChip(mon.element, size="md"))
-        chip_row.addWidget(_LevelChip(mon.level))
-        chip_row.addStretch(1)
-        top_lay.addLayout(chip_row)
+        stars_lbl = Stars(mon.stars, size=13, color=G.ACCENT)
+        title_col.addWidget(stars_lbl, 0, Qt.AlignmentFlag.AlignLeft)
 
-        self._outer.addWidget(top)
-        self._outer.addWidget(_hline())
+        title_col.addStretch(1)
+        hero_row.addLayout(title_col, 1)
 
-        # ── runes row ──
-        runes_box = QVBoxLayout()
-        runes_box.setContentsMargins(0, 0, 0, 0)
-        runes_box.setSpacing(10)
-        runes_box.addWidget(_section_label("RUNES ÉQUIPÉES"))
-        slots_row = QHBoxLayout()
-        slots_row.setContentsMargins(0, 0, 0, 0)
-        slots_row.setSpacing(6)
-        for slot in range(1, 7):
-            filled = slot <= self._equipped_count
-            marker = _RuneSlotMarker(slot, filled)
-            slots_row.addWidget(marker, 1)
-        runes_box.addLayout(slots_row)
-        runes_wrap = QWidget()
-        runes_wrap.setLayout(runes_box)
-        self._outer.addWidget(runes_wrap)
-        self._outer.addWidget(_hline())
+        hero_wrap = QWidget()
+        hero_wrap.setLayout(hero_row)
+        self._body_lay.addWidget(hero_wrap)
 
-        # ── stats block ──
-        stats_box = QVBoxLayout()
-        stats_box.setContentsMargins(0, 0, 0, 0)
-        stats_box.setSpacing(6)
-        stats_box.addWidget(_section_label("STATS"))
-        for key in ("HP", "ATK", "DEF", "SPD"):
-            row = QHBoxLayout()
-            row.setContentsMargins(0, 0, 0, 0)
-            label = QLabel(key)
-            label.setStyleSheet(
-                f"color:{theme.D.FG_MUTE}; font-family:'{theme.D.FONT_MONO}';"
-                f"font-size:12px;"
+        # 3. Stats list — label left, value right, 8 rows
+        stats_grid = QGridLayout()
+        stats_grid.setContentsMargins(0, 6, 0, 0)
+        stats_grid.setHorizontalSpacing(10)
+        stats_grid.setVerticalSpacing(4)
+        for i, (fr_label, key, is_pct) in enumerate(self.STATS):
+            lbl = QLabel(fr_label)
+            lbl.setStyleSheet(
+                f"color:{G.FG_DIM}; font-family:'{G.FONT_UI}';"
+                f"font-size:11px; font-weight:500;"
             )
-            value = QLabel(_format_stat(self._base_stats.get(key)))
-            value.setAlignment(Qt.AlignmentFlag.AlignRight)
-            value.setStyleSheet(
-                f"color:{theme.D.FG}; font-family:'{theme.D.FONT_MONO}';"
+            val = QLabel(_format_stat(self._base_stats.get(key), percent=is_pct))
+            val.setAlignment(Qt.AlignmentFlag.AlignRight)
+            val.setStyleSheet(
+                f"color:{G.FG}; font-family:'{G.FONT_MONO}';"
                 f"font-size:12px; font-weight:600;"
             )
-            row.addWidget(label)
-            row.addStretch(1)
-            row.addWidget(value)
-            stats_box.addLayout(row)
+            stats_grid.addWidget(lbl, i, 0)
+            stats_grid.addWidget(val, i, 1)
+        stats_grid.setColumnStretch(0, 1)
         stats_wrap = QWidget()
-        stats_wrap.setLayout(stats_box)
-        self._outer.addWidget(stats_wrap)
-        self._outer.addWidget(_hline())
+        stats_wrap.setLayout(stats_grid)
+        self._body_lay.addWidget(stats_wrap)
 
-        # ── eff. moy. row ──
-        eff_row = QHBoxLayout()
-        eff_row.setContentsMargins(0, 0, 0, 0)
-        eff_row.addWidget(_section_label("EFF. MOY."))
-        eff_row.addStretch(1)
-        eff_color = _eff_big_color(self._eff_avg, self._equipped_count > 0)
-        eff_val = QLabel(
-            f"{self._eff_avg:.1f}%" if self._equipped_count > 0 else "—"
+        # 4. Skills
+        self._body_lay.addSpacing(2)
+        self._body_lay.addWidget(_eyebrow("COMPÉTENCES"))
+        skills_row = QHBoxLayout()
+        skills_row.setContentsMargins(0, 0, 0, 0)
+        skills_row.setSpacing(8)
+        for glyph in ("✦", "❄", "☀", "✹"):
+            skills_row.addWidget(_SkillTile(glyph))
+        skills_row.addStretch(1)
+        sw = QWidget()
+        sw.setLayout(skills_row)
+        self._body_lay.addWidget(sw)
+
+        # 5. Rune Recommendations
+        self._body_lay.addSpacing(2)
+        self._body_lay.addWidget(_eyebrow("RUNES CONSEILLÉES"))
+        recos_row = QHBoxLayout()
+        recos_row.setContentsMargins(0, 0, 0, 0)
+        recos_row.setSpacing(6)
+        recos = (
+            ("Violent/Will", "2/4/6", "VIT · CC · ATQ"),
+            ("Rage",         "2/4/6", "ATQ · DGT Crit"),
+            ("Violent",      "2/4/6", "DEF · Stats"),
         )
-        eff_val.setStyleSheet(
-            f"color:{eff_color}; font-family:'{theme.D.FONT_MONO}';"
-            f"font-size:22px; font-weight:700;"
-        )
-        eff_row.addWidget(eff_val)
-        eff_wrap = QWidget()
-        eff_wrap.setLayout(eff_row)
-        self._outer.addWidget(eff_wrap)
+        for name, slots, hint in recos:
+            recos_row.addWidget(_RuneRecoCell(name, slots, hint), 1)
+        rw = QWidget()
+        rw.setLayout(recos_row)
+        self._body_lay.addWidget(rw)
 
-        self._outer.addStretch(1)
+        # 6. Evaluation Score
+        self._body_lay.addSpacing(2)
+        self._body_lay.addWidget(_eyebrow("SCORE D'ÉVALUATION"))
+        sc_row = QHBoxLayout()
+        sc_row.setContentsMargins(0, 0, 0, 0)
+        sc_row.setSpacing(6)
+        sc_row.addWidget(_ScoreCell("8.1", "Arène", tone="ok"), 1)
+        sc_row.addWidget(_ScoreCell("3.0", "GvG", tone="err"), 1)
+        sc_row.addWidget(_ScoreCell("7.5", "Donjons", tone="warn"), 1)
+        sw2 = QWidget()
+        sw2.setLayout(sc_row)
+        self._body_lay.addWidget(sw2)
 
-        # ── CTA ──
-        cta = QPushButton("Voir le détail complet")
-        cta.setCursor(Qt.CursorShape.PointingHandCursor)
-        cta.setFixedHeight(36)
-        cta.setStyleSheet(
+        # 7. User Notes
+        self._body_lay.addSpacing(2)
+        self._body_lay.addWidget(_eyebrow("NOTES"))
+        self._notes_edit = QTextEdit()
+        self._notes_edit.setPlaceholderText("Ajoute tes remarques et idées de build…")
+        self._notes_edit.setFixedHeight(64)
+        self._notes_edit.setStyleSheet(
             f"""
-            QPushButton {{
-                padding:0 14px; border:none; border-radius:8px;
-                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-                    stop:0 {theme.D.ACCENT}, stop:1 {theme.D.ACCENT_2});
-                color:#fff; font-family:'{theme.D.FONT_UI}';
-                font-size:12px; font-weight:600;
+            QTextEdit {{
+                background: {G.PANEL_2};
+                border:1px solid {G.BORDER};
+                border-radius:8px;
+                padding:6px 8px;
+                color:{G.FG};
+                font-family:'{G.FONT_UI}'; font-size:11px;
+                selection-background-color:{G.ACCENT_DIM};
             }}
-            QPushButton:hover {{
-                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-                    stop:0 {theme.D.ACCENT_2}, stop:1 {theme.D.ACCENT});
-            }}
+            QTextEdit:focus {{ border:1px solid {G.ACCENT}; }}
             """
         )
-        cta.clicked.connect(self._on_cta)
-        self._outer.addWidget(cta)
+        saved = self._notes.get(id(mon), "")
+        if saved:
+            self._notes_edit.setPlainText(saved)
+        self._body_lay.addWidget(self._notes_edit)
 
-    def _on_cta(self) -> None:
-        if self._monster is not None:
-            self.open_detail_clicked.emit(self._monster)
-
-
-def _eff_big_color(eff: float, equipped: bool) -> str:
-    if not equipped:
-        return theme.D.FG_MUTE
-    if eff > 85:
-        return theme.D.OK
-    return theme.D.ACCENT
+        self._body.adjustSize()
+        self._body.setMinimumHeight(self._body_lay.sizeHint().height())
 
 
-def _format_stat(val: int | None) -> str:
-    if val is None:
-        return "—"
-    return f"{val:,}".replace(",", "\u00A0")
+def _subtitle_for(mon: Monster) -> str:
+    """Mimics the 'Attack | Defense' label of the maquette.
+
+    We don't have a real archetype on the profile, so derive a best-effort
+    pair from stars/level heuristics."""
+    if mon.stars >= 5 and mon.level >= 40:
+        return "Attaque | Défense"
+    if mon.stars >= 5:
+        return "Attaque"
+    return "Polyvalent"
 
 
-def _name_seed(name: str) -> int:
-    h = 0
-    for ch in name:
-        h = ((h << 5) - h + ord(ch)) & 0xFFFFFFFF
-    return h
+def _drop_layout(layout) -> None:
+    while layout.count():
+        it = layout.takeAt(0)
+        w = it.widget()
+        if w is not None:
+            w.setParent(None)
+            w.deleteLater()
+        else:
+            child = it.layout()
+            if child is not None:
+                _drop_layout(child)

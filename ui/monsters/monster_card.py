@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from models import Monster
 from ui import theme
+G = theme.D
 from ui.monsters.elements import (
     ElementChip, MonsterPortrait, RuneMiniDots, Stars, element_meta, hex_alpha,
 )
@@ -19,12 +20,12 @@ from ui.monsters.elements import (
 
 def _eff_color(eff: float | None, equipped: bool) -> str:
     if not equipped or eff is None:
-        return theme.D.FG_MUTE
+        return G.FG_MUTE
     if eff > 85:
-        return theme.D.OK
+        return G.OK
     if eff > 65:
-        return theme.D.ACCENT
-    return theme.D.FG_DIM
+        return G.ACCENT
+    return G.FG_DIM
 
 
 def _eff_text(eff: float | None, equipped: bool) -> str:
@@ -36,7 +37,7 @@ def _eff_text(eff: float | None, equipped: bool) -> str:
 def _mini_label(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setStyleSheet(
-        f"color:{theme.D.FG_MUTE}; font-family:'{theme.D.FONT_UI}';"
+        f"color:{G.FG_MUTE}; font-family:'{G.FONT_UI}';"
         f"font-size:9px; font-weight:700; letter-spacing:1px;"
         f"background:transparent; border:none;"
     )
@@ -44,7 +45,11 @@ def _mini_label(text: str) -> QLabel:
 
 
 class MonsterCard(QFrame):
-    """Grid-view card. 220px min, padding 12, radius 12, two rows."""
+    """Compact portrait card matching the `monstres sw.png` maquette.
+
+    Everything is painted inside the portrait itself: stars overlaid on the
+    top edge, element icon bottom-left, Lv.XX pill bottom-right.
+    """
 
     clicked = Signal(object)
 
@@ -57,85 +62,22 @@ class MonsterCard(QFrame):
 
         self.setObjectName("MonsterCard")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setMinimumWidth(220)
+        # Stars + Lv pill are painted inside the portrait, so the card is
+        # basically portrait + a 2px inset for the selection ring.
+        self.setFixedSize(70, 70)
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(12, 12, 12, 12)
-        outer.setSpacing(10)
+        outer.setContentsMargins(2, 2, 2, 2)
+        outer.setSpacing(0)
+        outer.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # --- top row: portrait + name/stars/element ---
-        top = QHBoxLayout()
-        top.setSpacing(10)
-
-        self._portrait = MonsterPortrait(size=56)
+        # Portrait paints stars overlaid on its top edge itself.
+        self._portrait = MonsterPortrait(size=64)
         self._portrait.set_monster(
             monster.element, monster.stars, monster.level,
             monster.unit_master_id, _name_seed(monster.name),
         )
-        top.addWidget(self._portrait, 0, Qt.AlignmentFlag.AlignTop)
-
-        info = QVBoxLayout()
-        info.setSpacing(4)
-
-        self._name = QLabel(monster.name)
-        self._name.setStyleSheet(
-            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';"
-            f"font-size:13px; font-weight:600;"
-            f"background:transparent; border:none;"
-        )
-        self._name.setWordWrap(False)
-        info.addWidget(self._name)
-
-        self._stars = Stars(monster.stars, size=11)
-        info.addWidget(self._stars)
-
-        chip_row = QHBoxLayout()
-        chip_row.setContentsMargins(0, 0, 0, 0)
-        chip_row.setSpacing(0)
-        self._chip = ElementChip(monster.element, size="sm")
-        chip_row.addWidget(self._chip, 0, Qt.AlignmentFlag.AlignLeft)
-        chip_row.addStretch(1)
-        info.addLayout(chip_row)
-        info.addStretch(1)
-        top.addLayout(info, 1)
-        outer.addLayout(top)
-
-        # --- separator ---
-        sep = QFrame()
-        sep.setFixedHeight(1)
-        sep.setStyleSheet(f"background:{theme.D.BORDER}; border:none;")
-        outer.addWidget(sep)
-
-        # --- bottom row: runes dots (left) + eff. moy. (right) ---
-        bot = QHBoxLayout()
-        bot.setSpacing(10)
-
-        left = QVBoxLayout()
-        left.setSpacing(3)
-        left.addWidget(_mini_label("RUNES"))
-        self._dots = RuneMiniDots(equipped_count)
-        left.addWidget(self._dots)
-
-        right = QVBoxLayout()
-        right.setSpacing(3)
-        right.setAlignment(Qt.AlignmentFlag.AlignRight)
-        eff_label = _mini_label("EFF. MOY.")
-        eff_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        right.addWidget(eff_label)
-        self._eff = QLabel(_eff_text(eff_avg, self._equipped))
-        self._eff.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self._eff.setStyleSheet(
-            f"color:{_eff_color(eff_avg, self._equipped)};"
-            f"font-family:'{theme.D.FONT_MONO}';"
-            f"font-size:13px; font-weight:700;"
-            f"background:transparent; border:none;"
-        )
-        right.addWidget(self._eff)
-
-        bot.addLayout(left)
-        bot.addStretch(1)
-        bot.addLayout(right)
-        outer.addLayout(bot)
+        outer.addWidget(self._portrait, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._apply_selection()
 
@@ -146,21 +88,24 @@ class MonsterCard(QFrame):
         self._apply_selection()
 
     def _apply_selection(self) -> None:
-        bg = theme.D.ACCENT_DIM if self._selected else "rgba(255,255,255,0.02)"
-        border = hex_alpha(theme.D.ACCENT, "66") if self._selected else theme.D.BORDER
-        hover_bg = (
-            theme.D.ACCENT_DIM if self._selected else "rgba(255,255,255,0.035)"
-        )
+        if self._selected:
+            bg = G.ACCENT_DIM
+            border = G.ACCENT
+            width = 2
+        else:
+            # Lighter panel tone so each card stands out against the page bg.
+            bg = G.PANEL
+            border = G.BORDER
+            width = 1
         self.setStyleSheet(
             f"""
             #MonsterCard {{
                 background: {bg};
-                border: 1px solid {border};
-                border-radius: 12px;
+                border: {width}px solid {border};
+                border-radius: 10px;
             }}
             #MonsterCard:hover {{
-                background: {hover_bg};
-                border: 1px solid {hex_alpha(theme.D.ACCENT, '33')};
+                border: {width}px solid {G.BORDER_STR};
             }}
             """
         )
@@ -176,7 +121,7 @@ class MonsterTableRow(QFrame):
 
     clicked = Signal(object)
 
-    COLUMNS: tuple[int, ...] = (48, 0, 90, 100, 70, 130, 90)  # 0 = stretch name
+    COLUMNS: tuple[int, ...] = (48, 0, 90, 44, 70, 130, 90)  # 0 = stretch name
 
     def __init__(self, monster: Monster, eff_avg: float, equipped_count: int, parent=None) -> None:
         super().__init__(parent)
@@ -200,7 +145,7 @@ class MonsterTableRow(QFrame):
 
         name = QLabel(monster.name)
         name.setStyleSheet(
-            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';"
+            f"color:{G.FG}; font-family:'{G.FONT_UI}';"
             f"font-size:13px; font-weight:600;"
             f"background:transparent; border:none;"
         )
@@ -222,7 +167,7 @@ class MonsterTableRow(QFrame):
         level = QLabel(f"lv{monster.level}")
         level.setFixedWidth(self.COLUMNS[4])
         level.setStyleSheet(
-            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_MONO}';"
+            f"color:{G.FG}; font-family:'{G.FONT_MONO}';"
             f"font-size:12px; font-weight:600;"
             f"background:transparent; border:none;"
         )
@@ -242,7 +187,7 @@ class MonsterTableRow(QFrame):
         eff.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         eff.setStyleSheet(
             f"color:{_eff_color(eff_avg, self._equipped)};"
-            f"font-family:'{theme.D.FONT_MONO}';"
+            f"font-family:'{G.FONT_MONO}';"
             f"font-size:13px; font-weight:600;"
             f"background:transparent; border:none;"
         )
@@ -257,13 +202,13 @@ class MonsterTableRow(QFrame):
         self._apply_selection()
 
     def _apply_selection(self) -> None:
-        bg = theme.D.ACCENT_DIM if self._selected else "transparent"
+        bg = G.ACCENT_DIM if self._selected else "transparent"
         self.setStyleSheet(
             f"""
             #MonsterTableRow {{
                 background: {bg};
                 border: none;
-                border-bottom: 1px solid {theme.D.BORDER};
+                border-bottom: 1px solid {G.BORDER};
             }}
             #MonsterTableRow:hover {{
                 background: rgba(255,255,255,0.025);
@@ -287,11 +232,11 @@ class MonsterTableHeader(QFrame):
             f"""
             #MonsterTableHeader {{
                 background: rgba(0,0,0,0.15);
-                border-bottom: 1px solid {theme.D.BORDER};
+                border-bottom: 1px solid {G.BORDER};
                 border-top-left-radius: 12px; border-top-right-radius: 12px;
             }}
             QLabel {{
-                color:{theme.D.FG_MUTE}; font-family:'{theme.D.FONT_UI}';
+                color:{G.FG_MUTE}; font-family:'{G.FONT_UI}';
                 font-size:9px; font-weight:700; letter-spacing:0.8px;
                 background:transparent; border:none;
             }}
