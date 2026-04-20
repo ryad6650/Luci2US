@@ -116,6 +116,15 @@ class SplashScreen(QWidget):
         self._bar.setFixedWidth(480)
         lay.addWidget(self._bar, 0, Qt.AlignmentFlag.AlignHCenter)
 
+        self._status = QLabel("")
+        self._status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._status.setStyleSheet(
+            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';"
+            "font-size:12px; background:transparent;"
+        )
+        self._status.setVisible(False)
+        lay.addWidget(self._status, 0, Qt.AlignmentFlag.AlignHCenter)
+
         self.resize(640, 400)
         self._center_on_screen()
 
@@ -126,6 +135,26 @@ class SplashScreen(QWidget):
         self._bar.set_value(0.0)
         self._emitted = False
         self._timer.start(self._tick_ms)
+
+    def start_manual(self) -> None:
+        """Show the splash with a caller-driven progress bar (no auto timer)."""
+        self._status.setVisible(True)
+        self.show()
+        self.raise_()
+        self._bar.set_value(0.0)
+        self._emitted = False
+
+    def set_progress(self, ratio: float, status: str = "") -> None:
+        self._bar.set_value(ratio)
+        if status:
+            self._status.setText(status)
+
+    def finish_manual(self) -> None:
+        self._bar.set_value(1.0)
+        if not self._emitted:
+            self._emitted = True
+            self.finished.emit()
+        self.close()
 
     def _on_tick(self) -> None:
         self._elapsed_ms += self._tick_ms

@@ -11,10 +11,11 @@ import json
 import os
 import sys
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
+from assets import asset_sync
 from auto_mode import AutoMode, State
 from models import Rune, Verdict
 from profile_loader import load_profile_from_dict
@@ -23,6 +24,21 @@ from swex_bridge import detect_drops_dir
 from ui.main_window import MainWindow
 from ui.widgets.splash import SplashScreen
 from ui.widgets.verdict_overlay import VerdictOverlay
+
+
+class _AssetSyncThread(QThread):
+    progress = Signal(float, str)
+    done = Signal()
+    failed = Signal(str)
+
+    def run(self) -> None:
+        try:
+            asset_sync.ensure_assets(
+                progress=lambda r, s: self.progress.emit(r, s),
+            )
+            self.done.emit()
+        except Exception as e:  # noqa: BLE001 — report anything to UI
+            self.failed.emit(str(e))
 
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
@@ -125,7 +141,29 @@ def main() -> int:
     app = QApplication(sys.argv)
 
     splash = SplashScreen(duration_ms=1800)
-    splash.start()
+    _sync_thread: _AssetSyncThread | None = None
+
+    if asset_sync.is_up_to_date():
+        splash.start()
+    else:
+        splash.start_manual()
+        _sync_thread = _AssetSyncThread()
+        _sync_thread.progress.connect(splash.set_progress)
+        _sync_thread.done.connect(splash.finish_manual)
+
+        def _on_sync_failed(msg: str) -> None:
+            splash.close()
+            QMessageBox.critical(
+                None,
+                "Luci2US — Téléchargement des ressources",
+                f"Impossible de récupérer le bundle d'assets:\n\n{msg}\n\n"
+                "Vérifie ta connexion et relance l'application.",
+            )
+            app.quit()
+
+        _sync_thread.failed.connect(_on_sync_failed)
+        _sync_thread.start()
+
     app.processEvents()
 
     w = MainWindow()

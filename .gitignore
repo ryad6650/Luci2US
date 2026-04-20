@@ -36,8 +36,10 @@ assets/swarfarm/*
 !assets/swarfarm/runes/
 !assets/swarfarm/elements/
 
-# HD icons (regen via scripts/upscale_monster_icons.py)
+# Bundled heavy assets (downloaded via assets/asset_sync.py at first launch)
+assets/monsters/
 assets/monsters_hd/
+assets/.asset_version
 
 # Real-ESRGAN binary (download from https://github.com/xinntao/Real-ESRGAN/releases)
 tools/realesrgan/
