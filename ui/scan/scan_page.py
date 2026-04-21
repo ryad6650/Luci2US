@@ -1,15 +1,12 @@
-"""Scan page — refondue selon Plan page scan.png.
+"""Scan page — fond Fond 1.png + panneaux positionnés sur les zones dessinées.
 
-Layout :
-    "SCAN" (titre)
-    ┌─────────────────────────────┬───────────────────────┐
-    │ LastScannedCard             │ ScanHistoryPanel       │
-    │                             ├───────────────────────┤
-    │                             │ UpgradedRunePanel      │
-    └─────────────────────────────┴───────────────────────┘
+Le fond `fond_1.png` (1408×768) est affiché en mode **cover**
+(KeepAspectRatioByExpanding) : l'image remplit toute la page, centrée,
+avec rognage si le ratio fenêtre diffère du ratio image (1408×768).
 
-État au démarrage : les trois panneaux sont en état vide.
-Aucune fausse rune / fausse liste d'historique n'est injectée.
+Les widgets sont positionnés en coordonnées absolues via des ratios relatifs
+au rectangle cover (= toute la zone widget) pour s'aligner pixel-près avec
+les cadres dessinés, peu importe la taille réelle de la fenêtre.
 
 API publique :
     - set_active(active: bool)
@@ -23,9 +20,7 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPixmap
-from PySide6.QtWidgets import (
-    QFrame, QGridLayout, QLabel, QVBoxLayout, QWidget,
-)
+from PySide6.QtWidgets import QLabel, QWidget
 
 from models import Rune, Verdict
 from ui import theme
@@ -36,16 +31,16 @@ from ui.scan.upgraded_rune_panel import UpgradedRunePanel
 
 _SCAN_BG_ASSET = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "..", "..", "assets", "swarfarm", "scan_bg", "magic_circle.png",
+    "..", "..", "assets", "swarfarm", "scan_bg", "fond_1.png",
 ))
 
 
 class _PageBg(QWidget):
-    """Fond pleine page : pixmap 'cover' sans déformation.
+    """Fond pleine page : pixmap `fond_1.png` affiché en mode 'cover'.
 
-    Peint le pixmap en `KeepAspectRatioByExpanding` (comme CSS `background-size:
-    cover`) : l'image remplit tout le rectangle sans déformation, quitte à en
-    rogner les bords. Dégradé sombre en fallback si l'asset manque.
+    L'image est agrandie pour remplir tout le widget (KeepAspectRatioByExpanding),
+    centrée, avec rognage des bords si le ratio fenêtre diffère du ratio image
+    (1408×768). Pas de bandes noires.
     """
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -54,9 +49,9 @@ class _PageBg(QWidget):
             """
             background-color: qlineargradient(
                 x1:0, y1:0, x2:1, y2:1,
-                stop:0 #1c212c,
-                stop:0.5 #171b24,
-                stop:1 #1d242f
+                stop:0 #11151d,
+                stop:0.5 #0e1219,
+                stop:1 #11151d
             );
             """
         )
@@ -68,26 +63,36 @@ class _PageBg(QWidget):
             return
         painter = QPainter(self)
         try:
-            target = self.rect()
             scaled = self._pix.scaled(
-                target.size(),
+                self.size(),
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                 Qt.TransformationMode.SmoothTransformation,
             )
-            # Centrer le pixmap agrandi pour que le rognage soit équilibré.
-            x = target.x() + (target.width() - scaled.width()) // 2
-            y = target.y() + (target.height() - scaled.height()) // 2
+            x = (self.width() - scaled.width()) // 2
+            y = (self.height() - scaled.height()) // 2
             painter.drawPixmap(x, y, scaled)
         finally:
             painter.end()
 
+    def image_rect(self) -> tuple[int, int, int, int]:
+        """Rectangle visible (x, y, w, h) de l'image après cover.
 
-class _PageDim(QWidget):
-    """Overlay sombre pleine page pour préserver la lisibilité."""
-    def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.setStyleSheet("background-color: rgba(0, 0, 0, 0.55);")
+        En mode cover l'image remplit tout le widget (les débordements sont
+        rognés), donc le rectangle visible est simplement le rect du widget.
+        """
+        return (0, 0, self.width(), self.height())
+
+
+# ── Zones en ratios (x, y, w, h) du rectangle cover de l'image. ────────────
+# Mesurees sur scan 2.png + Fond 1.png 1408x768.
+_Z_TITLE       = (0.120, 0.020, 0.550, 0.080)  # "Scan de Runes [AVANCE]"
+_Z_SUBTITLE    = (0.120, 0.100, 0.300, 0.050)  # "Last Scanned Rune"
+_Z_HOLOGRAM    = (0.120, 0.150, 0.300, 0.450)  # hologramme sur cercle
+_Z_SCAN_BTN    = (0.130, 0.620, 0.260, 0.070)  # "Scanner Nouvelle Rune"
+_Z_DETAILS     = (0.420, 0.100, 0.320, 0.580)  # carte details rune
+_Z_RECO        = (0.200, 0.700, 0.560, 0.280)  # bandeau recommandation
+_Z_HISTORY     = (0.760, 0.020, 0.230, 0.760)  # grille 2x3
+_Z_UPGRADE     = (0.760, 0.780, 0.230, 0.200)  # slot bas-droit
 
 
 class ScanPage(QWidget):
@@ -97,10 +102,7 @@ class ScanPage(QWidget):
             f"ScanPage {{ background: transparent; color: {theme.D.FG}; }}"
         )
 
-        # Ordre de création = ordre de stacking (les layouts ne l'affectent pas).
-        # _bg en premier (derrière), puis _dim, puis le contenu par le layout.
         self._bg = _PageBg(self)
-        self._dim = _PageDim(self)
 
         self._total = 0
         self._kept = 0
@@ -108,45 +110,42 @@ class ScanPage(QWidget):
         self._eff_sum = 0.0
         self._active = False
 
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(24, 20, 24, 20)
-        outer.setSpacing(14)
-
         # ── titre "SCAN" ──
-        self._title = QLabel("SCAN")
+        self._title = QLabel("SCAN", self)
         self._title.setStyleSheet(
-            f"color:{theme.D.FG}; font-family:'{theme.D.FONT_UI}';"
+            f"color:{theme.D.FG}; background: transparent;"
+            f"font-family:'{theme.D.FONT_UI}';"
             f"font-size:30px; font-weight:800; letter-spacing:1.5px;"
         )
-        outer.addWidget(self._title)
 
-        # ── grille 2 colonnes ──
-        grid_host = QWidget()
-        grid = QGridLayout(grid_host)
-        grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(14)
-        grid.setVerticalSpacing(14)
-        grid.setColumnStretch(0, 14)
-        grid.setColumnStretch(1, 9)
-
-        self._last_card = LastScannedCard()
-        grid.addWidget(self._last_card, 0, 0, 2, 1)
-
-        self._history = ScanHistoryPanel()
+        # ── panneaux (enfants directs, positionnés en absolu) ──
+        self._last_card = LastScannedCard(self)
+        self._history = ScanHistoryPanel(self)
         self._history.entry_clicked.connect(self._on_history_clicked)
-        grid.addWidget(self._history, 0, 1)
-
-        self._upgrade_card = UpgradedRunePanel()
-        grid.addWidget(self._upgrade_card, 1, 1)
-
-        grid.setRowStretch(0, 7)
-        grid.setRowStretch(1, 5)
-        outer.addWidget(grid_host, 1)
-        # Pas d'injection de mock data : tout démarre en état vide.
+        self._upgrade_card = UpgradedRunePanel(self)
 
     def resizeEvent(self, e) -> None:  # noqa: N802
         self._bg.setGeometry(0, 0, self.width(), self.height())
-        self._dim.setGeometry(0, 0, self.width(), self.height())
+
+        ix, iy, iw, ih = self._bg.image_rect()
+
+        def place(widget: QWidget, zone: tuple[float, float, float, float]) -> None:
+            rx, ry, rw, rh = zone
+            widget.setGeometry(
+                ix + int(iw * rx),
+                iy + int(ih * ry),
+                int(iw * rw),
+                int(ih * rh),
+            )
+
+        place(self._title, _Z_TITLE)
+        place(self._last_card, _Z_DETAILS)
+        place(self._history, _Z_HISTORY)
+        place(self._upgrade_card, _Z_UPGRADE)
+        # Stacking : fond derrière, panneaux devant.
+        self._bg.lower()
+        for w in (self._title, self._last_card, self._history, self._upgrade_card):
+            w.raise_()
         super().resizeEvent(e)
 
     # ── API modulaire ──────────────────────────────────────────────────
