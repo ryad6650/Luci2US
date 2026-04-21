@@ -20,11 +20,13 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPixmap
-from PySide6.QtWidgets import QLabel, QWidget
+from PySide6.QtWidgets import QLabel, QPushButton, QWidget
 
 from models import Rune, Verdict
 from ui import theme
-from ui.scan.last_scanned_card import LastScannedCard
+from ui.scan.holographic_rune_visual import HolographicRuneVisual
+from ui.scan.optimizer_recommendation import OptimizerRecommendationPanel
+from ui.scan.rune_details_card import RuneDetailsCard
 from ui.scan.scan_history_panel import ScanHistoryPanel
 from ui.scan.upgraded_rune_panel import UpgradedRunePanel
 
@@ -110,16 +112,50 @@ class ScanPage(QWidget):
         self._eff_sum = 0.0
         self._active = False
 
-        # ── titre "SCAN" ──
-        self._title = QLabel("SCAN", self)
+        # Titre principal
+        self._title = QLabel("Scan de Runes [AVANCÉ]", self)
         self._title.setStyleSheet(
-            f"color:{theme.D.FG}; background: transparent;"
-            f"font-family:'{theme.D.FONT_UI}';"
-            f"font-size:30px; font-weight:800; letter-spacing:1.5px;"
+            f"color: {theme.D.FG}; background: transparent;"
+            f"font-family: '{theme.D.FONT_UI}';"
+            f"font-size: 26px; font-weight: 900; letter-spacing: 1.5px;"
         )
 
-        # ── panneaux (enfants directs, positionnés en absolu) ──
-        self._last_card = LastScannedCard(self)
+        # Sous-titre
+        self._subtitle = QLabel("Last Scanned Rune", self)
+        self._subtitle.setStyleSheet(
+            f"color: {theme.D.FG_DIM}; background: transparent;"
+            f"font-family: '{theme.D.FONT_UI}';"
+            f"font-size: 14px; font-weight: 700; letter-spacing: 0.8px;"
+        )
+
+        # Hologramme central
+        self._hologram = HolographicRuneVisual(self)
+
+        # Bouton scanner
+        self._scan_btn = QPushButton("Scanner Nouvelle Rune", self)
+        self._scan_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._scan_btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background: rgba(18, 40, 70, 0.75);
+                color: #6ec5ff;
+                border: 1px solid rgba(110, 197, 255, 0.55);
+                border-radius: 16px;
+                font-family: '{theme.D.FONT_UI}';
+                font-size: 13px; font-weight: 800; letter-spacing: 1px;
+            }}
+            QPushButton:hover {{
+                background: rgba(30, 60, 100, 0.80);
+                color: #a6dfff;
+            }}
+            """
+        )
+
+        # Carte details + recommandation
+        self._details = RuneDetailsCard(self)
+        self._reco = OptimizerRecommendationPanel(self)
+
+        # Colonne droite
         self._history = ScanHistoryPanel(self)
         self._history.entry_clicked.connect(self._on_history_clicked)
         self._upgrade_card = UpgradedRunePanel(self)
@@ -139,19 +175,28 @@ class ScanPage(QWidget):
             )
 
         place(self._title, _Z_TITLE)
-        place(self._last_card, _Z_DETAILS)
+        place(self._subtitle, _Z_SUBTITLE)
+        place(self._hologram, _Z_HOLOGRAM)
+        place(self._scan_btn, _Z_SCAN_BTN)
+        place(self._details, _Z_DETAILS)
+        place(self._reco, _Z_RECO)
         place(self._history, _Z_HISTORY)
         place(self._upgrade_card, _Z_UPGRADE)
-        # Stacking : fond derrière, panneaux devant.
+        # Stacking : fond derriere, enfants devant
         self._bg.lower()
-        for w in (self._title, self._last_card, self._history, self._upgrade_card):
+        for w in (
+            self._title, self._subtitle, self._hologram, self._scan_btn,
+            self._details, self._reco, self._history, self._upgrade_card,
+        ):
             w.raise_()
         super().resizeEvent(e)
 
     # ── API modulaire ──────────────────────────────────────────────────
     def update_scanned_rune(self, rune: Rune, verdict: Verdict) -> None:
         """Afficher une rune dans le panneau central + l'ajouter à l'historique."""
-        self._last_card.update_scanned_rune(rune, verdict)
+        self._hologram.show_hologram()
+        self._details.set_rune(rune)
+        self._reco.set_verdict(verdict)
         self._history.add_rune(rune, verdict)
 
     def update_upgrade(
@@ -185,7 +230,9 @@ class ScanPage(QWidget):
         self._sold = 0
         self._eff_sum = 0.0
         self._history.clear()
-        self._last_card.show_empty_state()
+        self._hologram.show_empty_state()
+        self._details.show_empty_state()
+        self._reco.show_empty_state()
         self._upgrade_card.show_empty_state()
 
     def on_rune(
@@ -214,4 +261,6 @@ class ScanPage(QWidget):
 
     # ── internals ──────────────────────────────────────────────────────
     def _on_history_clicked(self, rune: Rune, verdict: Verdict) -> None:
-        self._last_card.update_scanned_rune(rune, verdict)
+        self._hologram.show_hologram()
+        self._details.set_rune(rune)
+        self._reco.set_verdict(verdict)

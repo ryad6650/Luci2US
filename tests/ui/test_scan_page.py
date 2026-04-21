@@ -22,11 +22,14 @@ def test_empty_state_at_boot(qapp):
     # Aucune donnée fausse injectée au démarrage.
     assert len(page._history._cards) == 0
     assert _shown(page._history._empty_label) is True
-    # Panneau central en état vide : titre + slot vide.
-    assert page._last_card._header_title.text() == "En attente de scan..."
-    assert _shown(page._last_card._empty_slot) is True
-    assert _shown(page._last_card._portrait) is False
-    assert _shown(page._last_card._reco) is False
+    # Hologramme en état vide : hint visible, image masquée.
+    assert _shown(page._hologram._hint) is True
+    assert _shown(page._hologram._image) is False
+    # Carte détails en état vide : empty_hint visible, contenu masqué.
+    assert _shown(page._details._empty_hint) is True
+    assert _shown(page._details._main_badge) is False
+    # Panneau recommandation en état vide : bouton masqué.
+    assert _shown(page._reco._confirm_btn) is False
     # Panneau amélioration en état vide.
     assert _shown(page._upgrade_card._empty_label) is True
     assert _shown(page._upgrade_card._filled) is False
@@ -36,11 +39,15 @@ def test_update_scanned_rune_fills_central(qapp):
     page = ScanPage()
     r, v = _rune()
     page.update_scanned_rune(r, v)
-    assert page._last_card._header_title.text() == "Last Scanned Rune"
-    assert "VIOLENT" in page._last_card._title_line.text()
-    assert _shown(page._last_card._portrait) is True
-    assert _shown(page._last_card._empty_slot) is False
-    assert _shown(page._last_card._reco) is True
+    # Hologramme visible après scan.
+    assert _shown(page._hologram._image) is True
+    assert _shown(page._hologram._hint) is False
+    # Carte détails remplie : VIOLENT dans le titre.
+    assert "VIOLENT" in page._details._title.text()
+    assert _shown(page._details._empty_hint) is False
+    assert _shown(page._details._main_badge) is True
+    # Recommandation visible (bouton confirmer présent).
+    assert _shown(page._reco._confirm_btn) is True
     # Ajoute aussi à l'historique → label vide disparaît.
     assert len(page._history._cards) == 1
     assert _shown(page._history._empty_label) is False
@@ -75,7 +82,11 @@ def test_set_active_true_resets_to_empty(qapp):
     page.set_active(True)
     assert page._total == 0
     assert len(page._history._cards) == 0
-    assert _shown(page._last_card._empty_slot) is True
+    # Hologramme retour état vide.
+    assert _shown(page._hologram._hint) is True
+    assert _shown(page._hologram._image) is False
+    # Carte détails retour état vide.
+    assert _shown(page._details._empty_hint) is True
     assert _shown(page._upgrade_card._empty_label) is True
 
 
@@ -94,7 +105,9 @@ def test_set_active_true_while_active_does_not_reset(qapp):
     page.set_active(True)
     assert page._total == 1
     assert len(page._history._cards) == 1
-    assert _shown(page._last_card._portrait) is True
-    assert _shown(page._last_card._empty_slot) is False
-    assert _shown(page._last_card._reco) is True
-    assert "VIOLENT" in page._last_card._title_line.text()
+    # Hologramme toujours visible.
+    assert _shown(page._hologram._image) is True
+    assert _shown(page._hologram._hint) is False
+    # Carte détails toujours remplie.
+    assert "VIOLENT" in page._details._title.text()
+    assert _shown(page._details._empty_hint) is False
