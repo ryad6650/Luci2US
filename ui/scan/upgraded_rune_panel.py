@@ -23,7 +23,10 @@ API publique :
 """
 from __future__ import annotations
 
+import os
+
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget,
 )
@@ -53,12 +56,11 @@ class UpgradedRunePanel(QFrame):
         super().__init__(parent)
         self.setObjectName("UpgradedRunePanel")
         self.setStyleSheet(
-            f"""
-            #UpgradedRunePanel {{
-                background: rgba(24, 28, 36, 0.78);
-                border: 1px solid {theme.D.BORDER};
-                border-radius: 14px;
-            }}
+            """
+            #UpgradedRunePanel {
+                background: transparent;
+                border: none;
+            }
             """
         )
 
@@ -66,15 +68,11 @@ class UpgradedRunePanel(QFrame):
         outer.setContentsMargins(14, 14, 14, 14)
         outer.setSpacing(8)
 
+        # titre masque : "Derniere Rune Amelioree" est bake dans fond_v19.png
         title = QLabel("Dernière Rune Améliorée")
-        title.setStyleSheet(
-            f"color:{theme.D.FG}; background: transparent;"
-            f"font-family:'{theme.D.FONT_UI}';"
-            f"font-size:14px; font-weight:700; letter-spacing:0.3px;"
-        )
-        outer.addWidget(title)
+        title.setVisible(False)
 
-        # ── empty state (visible au démarrage) ──
+        # ── empty state : masque car bake dans fond_v19.png ──
         self._empty_label = QLabel("Aucune amélioration récente")
         self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty_label.setStyleSheet(
@@ -83,7 +81,7 @@ class UpgradedRunePanel(QFrame):
             f"font-size:12.5px; font-style: italic;"
             f"padding: 28px 8px;"
         )
-        outer.addWidget(self._empty_label, 1)
+        self._empty_label.setVisible(False)
 
         # ── contenu rempli (caché au démarrage) ──
         self._filled = QWidget()
@@ -164,7 +162,8 @@ class UpgradedRunePanel(QFrame):
 
     # ── public API ─────────────────────────────────────────────────────
     def show_empty_state(self) -> None:
-        self._empty_label.setVisible(True)
+        # _empty_label reste masque : le fond_v19.png fait office de placeholder
+        self._empty_label.setVisible(False)
         self._filled.setVisible(False)
 
     def update_upgrade(
@@ -175,6 +174,14 @@ class UpgradedRunePanel(QFrame):
     ) -> None:
         self._empty_label.setVisible(False)
         self._filled.setVisible(True)
+
+        self._portrait.set_rarity(rune.grade)
+        self._portrait.set_slot(rune.slot)
+        self._portrait.set_stars(rune.stars)
+        logo_path = theme.asset_set_logo(theme.set_asset_name(rune.set))
+        self._portrait.set_pixmap(
+            QPixmap(logo_path) if os.path.isfile(logo_path) else None
+        )
 
         set_en = {
             "Violent": "VIOLENT", "Will": "WILL", "Rapide": "SWIFT",

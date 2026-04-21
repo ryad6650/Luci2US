@@ -49,9 +49,8 @@ class HistoryRuneCard(QFrame):
         self.setStyleSheet(
             """
             #HistoryRuneCard {
-                background: rgba(26, 30, 40, 0.72);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 12px;
+                background: transparent;
+                border: none;
             }
             """
         )

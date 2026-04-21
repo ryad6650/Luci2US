@@ -99,12 +99,11 @@ class RuneDetailsCard(QFrame):
         super().__init__(parent)
         self.setObjectName("RuneDetailsCard")
         self.setStyleSheet(
-            f"""
-            #RuneDetailsCard {{
-                background: rgba(18, 22, 32, 0.72);
-                border: 1px solid {theme.D.BORDER};
-                border-radius: 16px;
-            }}
+            """
+            #RuneDetailsCard {
+                background: transparent;
+                border: none;
+            }
             """
         )
 
@@ -173,7 +172,8 @@ class RuneDetailsCard(QFrame):
         self._main_stat.setText("")
         for row in self._sub_rows:
             row.setVisible(False)
-        self._empty_hint.setVisible(True)
+        # _empty_hint masque : le texte d'attente est bake dans fond_v19.png
+        self._empty_hint.setVisible(False)
 
     def set_rune(self, rune: Rune) -> None:
         set_fr = (rune.set or "").upper()

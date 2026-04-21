@@ -21,17 +21,19 @@ def test_empty_state_at_boot(qapp):
     page = ScanPage()
     # Aucune donnée fausse injectée au démarrage.
     assert len(page._history._cards) == 0
-    assert _shown(page._history._empty_label) is True
+    # _empty_label masque : fond_v19.png est le placeholder visuel
+    assert _shown(page._history._empty_label) is False
     # Hologramme en état vide : hint visible, image masquée.
     assert _shown(page._hologram._hint) is True
     assert _shown(page._hologram._image) is False
-    # Carte détails en état vide : empty_hint visible, contenu masqué.
-    assert _shown(page._details._empty_hint) is True
+    # Carte détails en état vide : empty_hint masqué (bake dans fond), contenu masqué.
+    assert _shown(page._details._empty_hint) is False
     assert _shown(page._details._main_badge) is False
     # Panneau recommandation en état vide : bouton masqué.
     assert _shown(page._reco._confirm_btn) is False
     # Panneau amélioration en état vide.
-    assert _shown(page._upgrade_card._empty_label) is True
+    # _empty_label masque : fond_v19.png est le placeholder visuel
+    assert _shown(page._upgrade_card._empty_label) is False
     assert _shown(page._upgrade_card._filled) is False
 
 
@@ -86,8 +88,10 @@ def test_set_active_true_resets_to_empty(qapp):
     assert _shown(page._hologram._hint) is True
     assert _shown(page._hologram._image) is False
     # Carte détails retour état vide.
-    assert _shown(page._details._empty_hint) is True
-    assert _shown(page._upgrade_card._empty_label) is True
+    # _empty_hint masque : fond_v19.png est le placeholder visuel
+    assert _shown(page._details._empty_hint) is False
+    # _empty_label masque : fond_v19.png est le placeholder visuel
+    assert _shown(page._upgrade_card._empty_label) is False
 
 
 def test_set_active_true_while_active_does_not_reset(qapp):

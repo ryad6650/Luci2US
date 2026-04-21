@@ -41,12 +41,11 @@ class OptimizerRecommendationPanel(QFrame):
         super().__init__(parent)
         self.setObjectName("RecoPanel")
         self.setStyleSheet(
-            f"""
-            #RecoPanel {{
-                background: rgba(30, 22, 34, 0.82);
-                border: 1px solid rgba(255, 90, 200, 0.35);
-                border-radius: 18px;
-            }}
+            """
+            #RecoPanel {
+                background: transparent;
+                border: none;
+            }
             """
         )
 
@@ -116,7 +115,7 @@ class OptimizerRecommendationPanel(QFrame):
 
     def show_empty_state(self) -> None:
         self._decision.setText("")
-        self._score.setText("En attente de rune...")
+        self._score.setText("")
         self._reason.setText("")
         self._gauge_s2us.set_value(0.0)
         self._gauge_swop.set_value(0.0)

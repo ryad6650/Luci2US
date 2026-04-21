@@ -35,6 +35,9 @@ assets/swarfarm/*
 # Exceptions: rune + element icons sont commit (utilisés par l'UI)
 !assets/swarfarm/runes/
 !assets/swarfarm/elements/
+# Exception: fond_v19.png (background pixel-perfect image_19 crop)
+!assets/swarfarm/scan_bg/
+!assets/swarfarm/scan_bg/fond_v19.png
 
 # Bundled heavy assets (downloaded via assets/asset_sync.py at first launch)
 assets/monsters/
