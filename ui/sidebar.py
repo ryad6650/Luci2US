@@ -18,6 +18,13 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLay
 
 from ui import theme
 
+# ── Constantes pour l'état actif de la nav ──────────────────────────────────
+ACTIVE_BG = (
+    "qlineargradient(x1:0, y1:0, x2:1, y2:0,"
+    " stop:0 rgba(232, 60, 90, 0.22), stop:1 rgba(184, 60, 230, 0.08))"
+)
+ACTIVE_BAR_COLOR = "#e83c5a"
+ACTIVE_TEXT_COLOR = "#ff6a8a"
 
 _LOGO_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -138,14 +145,24 @@ class _NavButton(QPushButton):
             self._live_wrap.setVisible(live)
 
     def _apply_style(self, active: bool) -> None:
-        fg = theme.D.FG if active else theme.D.FG_MUTE
-        icon_fg = theme.D.ACCENT if active else theme.D.FG_MUTE
-        bg = theme.D.ACCENT_DIM if active else "transparent"
-        weight = 600 if active else 500
+        if active:
+            bg = ACTIVE_BG
+            border_left = f"3px solid {ACTIVE_BAR_COLOR}"
+            fg = ACTIVE_TEXT_COLOR
+            icon_fg = ACTIVE_TEXT_COLOR
+            weight = 700
+        else:
+            bg = "transparent"
+            # Même largeur de bordure que l'état actif pour éviter le décalage horizontal
+            border_left = "3px solid transparent"
+            fg = theme.D.FG_MUTE
+            icon_fg = theme.D.FG_MUTE
+            weight = 500
         self.setStyleSheet(
             f"""
             _NavButton {{
-                text-align:left; background:{bg}; border:none;
+                text-align:left; background:{bg};
+                border:none; border-left:{border_left};
                 border-radius:6px;
             }}
             _NavButton:hover {{ background:rgba(255,255,255,0.04); }}
