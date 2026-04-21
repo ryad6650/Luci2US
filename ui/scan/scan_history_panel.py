@@ -31,8 +31,9 @@ class ScanHistoryPanel(QFrame):
         self.setStyleSheet(
             """
             #ScanHistoryPanel {
-                background: transparent;
-                border: none;
+                background: rgba(14, 18, 26, 0.72);
+                border: 1px solid rgba(96, 165, 250, 0.20);
+                border-radius: 16px;
             }
             """
         )
@@ -41,11 +42,15 @@ class ScanHistoryPanel(QFrame):
         outer.setContentsMargins(14, 12, 14, 14)
         outer.setSpacing(8)
 
-        # _title masque : "Scan History" est bake dans fond_v19.png
         self._title = QLabel("Scan History")
-        self._title.setVisible(False)
+        self._title.setStyleSheet(
+            f"color: {theme.D.FG}; background: transparent;"
+            f"font-family: '{theme.D.FONT_UI}';"
+            f"font-size: 14px; font-weight: 800; letter-spacing: 0.6px;"
+        )
+        outer.addWidget(self._title)
 
-        # Empty state label — hidden: baked background acts as placeholder
+        # Empty state label — shown when no cards yet.
         self._empty_label = QLabel("Aucun historique de scan")
         self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty_label.setStyleSheet(
@@ -53,7 +58,7 @@ class ScanHistoryPanel(QFrame):
             f"font-family: '{theme.D.FONT_UI}';"
             f"font-size: 12px; font-style: italic; padding: 20px 8px;"
         )
-        self._empty_label.setVisible(False)
+        outer.addWidget(self._empty_label)
 
         self._grid = QGridLayout()
         self._grid.setContentsMargins(0, 0, 0, 0)
@@ -80,7 +85,7 @@ class ScanHistoryPanel(QFrame):
             c.deleteLater()
         self._cards.clear()
         self._relayout()
-        # _empty_label reste masque : fond_v19.png est le placeholder visuel
+        self._empty_label.setVisible(True)
 
     def count(self) -> int:
         return len(self._cards)

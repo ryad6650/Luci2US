@@ -19,8 +19,7 @@ def _mk_rune() -> Rune:
 def test_empty_state(qapp):
     w = RuneDetailsCard()
     assert w._title.text() == ""
-    # _empty_hint masque en etat vide : fond_v19.png est le placeholder visuel
-    assert w._empty_hint.isHidden() is True
+    assert w._empty_hint.isHidden() is False
 
 
 def test_populate(qapp):

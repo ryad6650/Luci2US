@@ -1,28 +1,19 @@
-"""Scan page — fond fond_v19.png (1152x768, sidebar excluded) + widgets overlay.
+"""Scan page — fond Fond 1.png + panneaux positionnés sur les zones dessinées.
 
-Le fond `fond_v19.png` est le crop de image_19.png apres suppression de la sidebar
-(x=0..256 decoupe). Il est affiche en mode **cover** (KeepAspectRatioByExpanding).
+Le fond `fond_1.png` (1408×768) est affiché en mode **cover**
+(KeepAspectRatioByExpanding) : l'image remplit toute la page, centrée,
+avec rognage si le ratio fenêtre diffère du ratio image (1408×768).
 
-Les widgets dynamiques (textes, jauges, boutons) sont positionnes en ratios absolus
-mesures au pixel sur l'image de reference image_19.png (1408x768, sidebar=256px).
-Les zones sont relatives au crop 1152x768.
-
-Zones mesurees avec PIL sur image_19.png (crop x=256..1408) :
-    _Z_TITLE    = (0.0694, 0.0326, 0.3724, 0.0703)  # "Scan de Runes [AVANCE]"
-    _Z_SUBTITLE = (0.0694, 0.1315, 0.1814, 0.0378)  # "Last Scanned Rune"
-    _Z_HOLOGRAM = (0.0599, 0.1432, 0.1910, 0.4857)  # crystal + magic circle
-    _Z_SCAN_BTN = (0.0694, 0.6250, 0.1988, 0.0898)  # "Scanner Nouvelle Rune"
-    _Z_DETAILS  = (0.2474, 0.1107, 0.3594, 0.5716)  # RAGE RUNE / substats
-    _Z_RECO     = (0.0425, 0.7161, 0.6250, 0.2331)  # RECOMMANDATION panel
-    _Z_HISTORY  = (0.6510, 0.0078, 0.3247, 0.7461)  # 2x3 history grid
-    _Z_UPGRADE  = (0.6510, 0.7617, 0.3255, 0.2096)  # Derniere Rune Amelioree
+Les widgets sont positionnés en coordonnées absolues via des ratios relatifs
+au rectangle cover (= toute la zone widget) pour s'aligner pixel-près avec
+les cadres dessinés, peu importe la taille réelle de la fenêtre.
 
 API publique :
     - set_active(active: bool)
     - on_rune(rune, verdict, ...)           → update_scanned_rune
     - on_rune_upgraded(rune, verdict, ...)  → update_upgrade
-    - update_scanned_rune(rune, verdict)    → methode modulaire externe
-    - update_upgrade(rune, verdict, ...)    → idem pour l'amelioration
+    - update_scanned_rune(rune, verdict)    → méthode modulaire externe
+    - update_upgrade(rune, verdict, ...)    → idem pour l'amélioration
 """
 from __future__ import annotations
 import os
@@ -42,7 +33,7 @@ from ui.scan.upgraded_rune_panel import UpgradedRunePanel
 
 _SCAN_BG_ASSET = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "..", "..", "assets", "swarfarm", "scan_bg", "fond_v19.png",
+    "..", "..", "assets", "swarfarm", "scan_bg", "fond_1.png",
 ))
 
 
@@ -95,15 +86,15 @@ class _PageBg(QWidget):
 
 
 # ── Zones en ratios (x, y, w, h) du rectangle cover de l'image. ────────────
-# Mesurees au pixel avec PIL sur image_19.png crop 1152x768 (sidebar=256px exclue).
-_Z_TITLE       = (0.0694, 0.0326, 0.3724, 0.0703)  # "Scan de Runes [AVANCE]"
-_Z_SUBTITLE    = (0.0694, 0.1315, 0.1814, 0.0378)  # "Last Scanned Rune"
-_Z_HOLOGRAM    = (0.0599, 0.1432, 0.1910, 0.4857)  # crystal + magic circle
-_Z_SCAN_BTN    = (0.0694, 0.6250, 0.1988, 0.0898)  # "Scanner Nouvelle Rune"
-_Z_DETAILS     = (0.2474, 0.1107, 0.3594, 0.5716)  # RAGE RUNE / substats card
-_Z_RECO        = (0.0425, 0.7161, 0.6250, 0.2331)  # RECOMMANDATION panel
-_Z_HISTORY     = (0.6510, 0.0078, 0.3247, 0.7461)  # 2x3 history grid
-_Z_UPGRADE     = (0.6510, 0.7617, 0.3255, 0.2096)  # Derniere Rune Amelioree
+# Mesurees sur scan 2.png + Fond 1.png 1408x768.
+_Z_TITLE       = (0.120, 0.020, 0.550, 0.080)  # "Scan de Runes [AVANCE]"
+_Z_SUBTITLE    = (0.120, 0.100, 0.300, 0.050)  # "Last Scanned Rune"
+_Z_HOLOGRAM    = (0.120, 0.150, 0.300, 0.450)  # hologramme sur cercle
+_Z_SCAN_BTN    = (0.130, 0.620, 0.260, 0.070)  # "Scanner Nouvelle Rune"
+_Z_DETAILS     = (0.420, 0.100, 0.320, 0.580)  # carte details rune
+_Z_RECO        = (0.200, 0.700, 0.560, 0.280)  # bandeau recommandation
+_Z_HISTORY     = (0.760, 0.020, 0.230, 0.760)  # grille 2x3
+_Z_UPGRADE     = (0.760, 0.780, 0.230, 0.200)  # slot bas-droit
 
 
 class ScanPage(QWidget):
@@ -121,31 +112,42 @@ class ScanPage(QWidget):
         self._eff_sum = 0.0
         self._active = False
 
-        # Titre et sous-titre: bakes dans fond_v19.png — on garde les widgets
-        # mais invisibles pour conserver la compatibilite des tests.
-        self._title = QLabel("", self)
-        self._title.setVisible(False)
+        # Titre principal
+        self._title = QLabel("Scan de Runes [AVANCÉ]", self)
+        self._title.setStyleSheet(
+            f"color: {theme.D.FG}; background: transparent;"
+            f"font-family: '{theme.D.FONT_UI}';"
+            f"font-size: 26px; font-weight: 900; letter-spacing: 1.5px;"
+        )
 
-        self._subtitle = QLabel("", self)
-        self._subtitle.setVisible(False)
+        # Sous-titre
+        self._subtitle = QLabel("Last Scanned Rune", self)
+        self._subtitle.setStyleSheet(
+            f"color: {theme.D.FG_DIM}; background: transparent;"
+            f"font-family: '{theme.D.FONT_UI}';"
+            f"font-size: 14px; font-weight: 700; letter-spacing: 0.8px;"
+        )
 
         # Hologramme central
         self._hologram = HolographicRuneVisual(self)
 
-        # Bouton scanner — texte vide, fond transparent: l'art est bake dans l'image.
-        # Le signal clicked reste fonctionnel.
-        self._scan_btn = QPushButton("", self)
+        # Bouton scanner
+        self._scan_btn = QPushButton("Scanner Nouvelle Rune", self)
         self._scan_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._scan_btn.setStyleSheet(
-            """
-            QPushButton {
-                background: transparent;
-                border: none;
-            }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 0.06);
+            f"""
+            QPushButton {{
+                background: rgba(18, 40, 70, 0.75);
+                color: #6ec5ff;
+                border: 1px solid rgba(110, 197, 255, 0.55);
                 border-radius: 16px;
-            }
+                font-family: '{theme.D.FONT_UI}';
+                font-size: 13px; font-weight: 800; letter-spacing: 1px;
+            }}
+            QPushButton:hover {{
+                background: rgba(30, 60, 100, 0.80);
+                color: #a6dfff;
+            }}
             """
         )
 
@@ -172,7 +174,8 @@ class ScanPage(QWidget):
                 int(ih * rh),
             )
 
-        # _title/_subtitle sont caches (bakes dans fond_v19.png) — pas de place()
+        place(self._title, _Z_TITLE)
+        place(self._subtitle, _Z_SUBTITLE)
         place(self._hologram, _Z_HOLOGRAM)
         place(self._scan_btn, _Z_SCAN_BTN)
         place(self._details, _Z_DETAILS)
@@ -182,7 +185,7 @@ class ScanPage(QWidget):
         # Stacking : fond derriere, enfants devant
         self._bg.lower()
         for w in (
-            self._hologram, self._scan_btn,
+            self._title, self._subtitle, self._hologram, self._scan_btn,
             self._details, self._reco, self._history, self._upgrade_card,
         ):
             w.raise_()
