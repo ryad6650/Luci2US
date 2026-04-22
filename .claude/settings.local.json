@@ -111,7 +111,28 @@
       "Bash(LUCI2US_START_PAGE=runes python scan_app.py)",
       "Bash(LUCI2US_START_PAGE=monsters python scan_app.py)",
       "Bash(taskkill /F /IM python.exe)",
-      "Bash(taskkill *)"
+      "Bash(taskkill *)",
+      "Bash(pip install *)",
+      "Bash(where msedge.exe chrome.exe)",
+      "Bash(mkdir -p \"C:/Users/louis/Desktop/Rune2us/_shots\")",
+      "Bash(\"C:/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1920,1047 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v1.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(\"C:/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1920,1047 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v2.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(\"C:/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1920,1047 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v3.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1920,1047 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v4.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1920,1047 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v5.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1920,1047 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v6.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=1920,1047 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v7.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=3840,2094 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v7_hd.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --hide-scrollbars --window-size=3840,2094 --screenshot=\"C:/Users/louis/Desktop/Rune2us/_shots/h_v8.png\" \"file:///C:/Users/louis/Desktop/Rune2us/mockups/H-fond-sw2.html\")",
+      "Bash(where npx *)",
+      "Bash(npx --yes live-server --port=5173 --open=/mockups/H-fond-sw2.html --no-browser)",
+      "Bash(netstat -ano)",
+      "Bash(npx --yes live-server --port=5173 --no-browser --watch=mockups,images --ignore=\"web/**\")",
+      "Bash(git *)",
+      "Bash(bash *)",
+      "WebFetch(domain:localhost)",
+      "Bash(cp assets/swarfarm/rune_slots/*.png \".superpowers/brainstorm/484-1776853083/content/assets/rune_slots/\")",
+      "Bash(cp assets/swarfarm/runes/*.png \".superpowers/brainstorm/484-1776853083/content/assets/sets/\")"
     ]
   }
 }

@@ -388,17 +388,17 @@ class TestSmartFilter:
     def settings_smart_on(self):
         return {"SmartPowerup": True}
 
-    def test_level_0_not_ready(self, smart_filter, settings_smart_on):
+    def test_level_0_ready_via_projection(self, smart_filter, settings_smart_on):
         rune = _make_rune(level=0, grade="Legendaire")
-        assert should_evaluate_now(rune, smart_filter, settings_smart_on) is False
+        assert should_evaluate_now(rune, smart_filter, settings_smart_on) is True
 
     def test_level_3_ready(self, smart_filter, settings_smart_on):
         rune = _make_rune(level=3, grade="Legendaire")
         assert should_evaluate_now(rune, smart_filter, settings_smart_on) is True
 
-    def test_level_5_not_checkpoint(self, smart_filter, settings_smart_on):
+    def test_level_5_ready_via_projection(self, smart_filter, settings_smart_on):
         rune = _make_rune(level=5, grade="Legendaire")
-        assert should_evaluate_now(rune, smart_filter, settings_smart_on) is False
+        assert should_evaluate_now(rune, smart_filter, settings_smart_on) is True
 
     def test_level_6_ready(self, smart_filter, settings_smart_on):
         rune = _make_rune(level=6, grade="Legendaire")

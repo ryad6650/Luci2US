@@ -613,7 +613,7 @@ def should_evaluate_now(
                 return False
             if grade == "Legendaire" and rune.level < legend_target:
                 return False
-        return rune.level in CHECKPOINTS
+        return True
     else:
         target = _LEVEL_TARGETS[f.level] if 0 <= f.level < len(_LEVEL_TARGETS) else 0
         return rune.level >= target

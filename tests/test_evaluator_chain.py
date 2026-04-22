@@ -181,19 +181,19 @@ class TestSmartLevelPowerUp:
         """Crée un fichier .S2US avec un filtre Violent level=-1 (Smart)."""
         return _make_s2us_file([{"Violent": 1, "Slot1": 1, "Level": -1}])
 
-    def test_level0_smart_returns_powerup(self):
-        """Rune level 0 + filtre Smart → POWER-UP (pas encore au checkpoint)."""
+    def test_level0_smart_evaluates_via_projection(self):
+        """Rune level 0 + filtre Smart → évaluation immédiate via projection +12."""
         path = self._make_smart_filter_file()
         try:
             rune = _rune(level=0)
             v = evaluate_chain(rune, _config(path))
-            assert v.decision == "POWER-UP"
+            assert v.decision in ("KEEP", "SELL")
             assert v.source == "s2us"
         finally:
             os.unlink(path)
 
     def test_level3_smart_evaluates_normally(self):
-        """Rune level 3 + filtre Smart → évaluation normale (checkpoint atteint)."""
+        """Rune level 3 + filtre Smart → évaluation normale."""
         path = self._make_smart_filter_file()
         try:
             rune = _rune(level=3)
@@ -203,13 +203,13 @@ class TestSmartLevelPowerUp:
         finally:
             os.unlink(path)
 
-    def test_level5_smart_returns_powerup(self):
-        """Rune level 5 (pas un checkpoint) + filtre Smart → POWER-UP."""
+    def test_level5_smart_evaluates_via_projection(self):
+        """Rune level 5 + filtre Smart → évaluation immédiate via projection +12."""
         path = self._make_smart_filter_file()
         try:
             rune = _rune(level=5)
             v = evaluate_chain(rune, _config(path))
-            assert v.decision == "POWER-UP"
+            assert v.decision in ("KEEP", "SELL")
             assert v.source == "s2us"
         finally:
             os.unlink(path)
@@ -232,10 +232,12 @@ class TestSmartPowerupOverride:
             cfg["s2us"]["global_settings"] = {"SmartPowerup": False, "RareLevel": 2}
 
             # Rune Rare level 3 : avec SmartPowerup=False et RareLevel=2,
-            # le filtre exige level >= 6 pour Rare, donc should_evaluate_now → False → POWER-UP
+            # le filtre exige level >= 6 pour Rare, donc should_evaluate_now → False
+            # → aucun filtre évaluable → SELL
             rune = _rune(level=3, grade="Rare")
             v = evaluate_chain(rune, cfg)
-            assert v.decision == "POWER-UP"
+            assert v.decision == "SELL"
+            assert "Aucun filtre actif" in v.reason
         finally:
             os.unlink(path)
 

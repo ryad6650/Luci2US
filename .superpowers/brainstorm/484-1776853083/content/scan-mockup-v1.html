@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Scan Page — Mockup v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #1a1d24;
+    --bg-hi:    #232730;
+    --bg-lo:    #1f232c;
+    --sidebar:  #15171c;
+    --panel:    #232730;
+    --panel-2:  rgba(40,46,58,0.70);
+    --stat-bg:  rgba(255,255,255,0.04);
+    --border:   rgba(255,255,255,0.08);
+    --border-s: rgba(255,255,255,0.14);
+    --fg:       #f5ecef;
+    --fg-dim:   #c2a7af;
+    --fg-mute:  #7a6168;
+    --accent:   #f0689a;
+    --accent-2: #d93d7a;
+    --accent-dim: rgba(240,104,154,0.14);
+    --ok:       #5dd39e;
+    --err:      #ef6461;
+    --warn:     #f4c05a;
+    --info:     #9dd9ff;
+    --legend:   #f5c16e;
+    --hero:     #ED8DED;
+    --rare:     #5aa0d8;
+    --magic:    #8ec44a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: radial-gradient(at 12% 0%, var(--bg-hi) 0%, var(--bg-lo) 100%);
+    color: var(--fg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ============= APP SHELL (mimique la main_window) ============= */
+  .app {
+    display: grid;
+    grid-template-columns: 188px 1fr;
+    min-height: 100vh;
+  }
+  .sidebar {
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    padding: 18px 10px;
+  }
+  .logo {
+    color: var(--accent);
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: 1px;
+    padding: 6px 10px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .navitem {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--fg-dim);
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    margin-bottom: 3px;
+    position: relative;
+  }
+  .navitem .ic { width: 16px; height: 16px; opacity: 0.7; }
+  .navitem:hover { color: var(--fg); background: rgba(255,255,255,0.03); }
+  .navitem.active {
+    background: linear-gradient(90deg, rgba(240,104,154,0.18), rgba(217,61,122,0.08));
+    color: var(--accent);
+  }
+  .navitem.active::before {
+    content: ""; position: absolute; left: 0; top: 6px; bottom: 6px;
+    width: 3px; background: var(--accent); border-radius: 0 3px 3px 0;
+  }
+
+  /* ============= PAGE ============= */
+  .page { padding: 0; overflow: hidden; }
+
+  /* --- Header --- */
+  .page-head {
+    padding: 22px 28px 12px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 20px;
+  }
+  .title-col .eyebrow {
+    color: var(--accent);
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    margin-bottom: 3px;
+  }
+  .title-col h1 {
+    margin: 0;
+    color: var(--fg);
+    font-size: 24px; font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  .head-right {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px;
+    background: rgba(93,211,158,0.10);
+    border: 1px solid rgba(93,211,158,0.40);
+    border-radius: 14px;
+    color: var(--ok);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.4px;
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px; background: var(--ok); border-radius: 50%;
+    box-shadow: 0 0 8px var(--ok);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+  }
+  .mode-pill {
+    padding: 7px 14px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    color: var(--accent);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.8px;
+  }
+  .btn-primary {
+    padding: 9px 18px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    border: none;
+    border-radius: 11px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+  }
+  .btn-primary:hover { filter: brightness(1.1); }
+
+  /* --- Separator --- */
+  .sep { height: 1px; background: var(--border); margin: 0 0; }
+
+  /* --- Toolbar (session stats) --- */
+  .toolbar {
+    padding: 12px 28px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .stat-cell {
+    flex: 1 1 0;
+    display: flex; flex-direction: column; gap: 2px;
+    background: var(--stat-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .stat-cell .lab {
+    color: var(--fg-mute);
+    font-size: 10px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .stat-cell .val {
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 19px; font-weight: 700;
+  }
+  .stat-cell.keep .val { color: var(--ok); }
+  .stat-cell.sell .val { color: var(--err); }
+  .stat-cell.mana .val { color: var(--warn); }
+
+  /* --- Body split --- */
+  .body {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 0;
+    padding: 10px 0 28px;
+  }
+  .body-left { padding: 0 28px; display: flex; flex-direction: column; gap: 18px; }
+  .body-right {
+    border-left: 1px solid var(--border);
+    padding: 14px 22px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+
+  /* --- Section title --- */
+  .section-title {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .section-title h3 {
+    margin: 0;
+    color: var(--fg);
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.4px;
+  }
+  .section-title .hint {
+    color: var(--fg-mute);
+    font-size: 10px; letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  /* ================================================================
+     DERNIÈRE RUNE SCANNÉE — carte large style RuneCardWidget étendu
+     ================================================================ */
+  .scanned-card {
+    background: var(--panel);
+    border: 1px solid var(--legend);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: 120px 1fr auto;
+    gap: 20px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35),
+                0 0 0 1px rgba(245,193,110,0.08) inset;
+    position: relative;
+    overflow: hidden;
+  }
+  .scanned-card::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(at 100% 0%, rgba(245,193,110,0.08), transparent 40%);
+    pointer-events: none;
+  }
+  .scan-portrait {
+    width: 120px; height: 120px;
+    background: radial-gradient(circle at 50% 40%, #3b2a10 0%, #1a1208 70%);
+    border: 2px solid var(--legend);
+    border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .scan-portrait .set-icon {
+    font-size: 44px; line-height: 1;
+    filter: drop-shadow(0 0 8px rgba(245,193,110,0.6));
+  }
+  .scan-portrait .lvl {
+    position: absolute; bottom: -8px;
+    background: var(--legend); color: #1a1208;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 800;
+    padding: 2px 10px; border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  .scan-portrait .slot {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(0,0,0,0.6); color: var(--legend);
+    width: 22px; height: 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 800;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(245,193,110,0.4);
+  }
+  .scan-info { display: flex; flex-direction: column; min-width: 0; }
+  .scan-info .st {
+    color: var(--legend);
+    font-size: 17px; font-weight: 800; letter-spacing: 0.3px;
+    margin-bottom: 2px;
+  }
+  .scan-info .mt {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .substats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px;
+    margin-top: auto;
+  }
+  .sub-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px;
+  }
+  .sub-row .k { color: var(--fg-dim); font-weight: 600; letter-spacing: 0.2px; }
+  .sub-row .v { color: var(--fg); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+  .sub-row .v.hi { color: var(--ok); }
+
+  .scan-score {
+    display: flex; flex-direction: column; gap: 10px;
+    padding-left: 18px;
+    border-left: 1px solid var(--border);
+    min-width: 140px;
+  }
+  .score-row { display: flex; flex-direction: column; }
+  .score-row .lab {
+    color: var(--fg-mute);
+    font-size: 10px; font-weight: 600; letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .score-row .val {
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px; font-weight: 800;
+  }
+  .score-row .val.big { font-size: 28px; color: var(--ok); }
+  .grade-badge {
+    display: inline-block;
+    background: var(--ok);
+    color: #0b2017;
+    padding: 2px 10px; border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 800;
+    width: fit-content;
+  }
+
+  /* ================================================================
+     HISTORIQUE — grille compacte (style RuneCardWidget mini)
+     ================================================================ */
+  .history-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .hist-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .hist-card:hover { border-color: var(--accent); }
+  .hist-card.keep { border-left: 3px solid var(--ok); }
+  .hist-card.sell { border-left: 3px solid var(--err); opacity: 0.72; }
+  .hist-card .ic {
+    width: 40px; height: 40px; border-radius: 8px;
+    background: radial-gradient(circle, #2a1a0a, #140a04);
+    border: 1px solid var(--border-s);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .hist-card .body {
+    display: flex; flex-direction: column; min-width: 0;
+  }
+  .hist-card .name {
+    color: var(--fg);
+    font-size: 11px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .hist-card .meta {
+    color: var(--fg-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+  }
+  .hist-card .verdict {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.6px;
+  }
+  .hist-card .verdict.keep { color: var(--ok); }
+  .hist-card .verdict.sell { color: var(--err); }
+
+  /* ================================================================
+     SIDE PANEL — verdict + upgrade
+     ================================================================ */
+  .reco-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .reco-eyebrow {
+    color: var(--accent);
+    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    text-align: center;
+  }
+  .reco-decision {
+    font-size: 42px; font-weight: 900; letter-spacing: 2px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    line-height: 1;
+  }
+  .reco-decision.keep { color: var(--ok); }
+  .reco-decision.sell { color: var(--err); }
+  .reco-score-row {
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    color: var(--fg-dim);
+    font-size: 11px; letter-spacing: 0.4px;
+  }
+  .reco-score-row .coin {
+    color: var(--warn); font-size: 14px;
+  }
+  .reco-score-row .val {
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 13px;
+  }
+  .reco-reason {
+    background: var(--stat-bg);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--fg-dim);
+    font-size: 11px; line-height: 1.5;
+  }
+  .gauges {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .gauge {
+    background: var(--stat-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 6px 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .gauge .ring {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: conic-gradient(var(--gcol,var(--accent)) calc(var(--pct,0.5) * 360deg), rgba(255,255,255,0.06) 0);
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gauge .ring::after {
+    content: "";
+    position: absolute; inset: 5px;
+    background: var(--panel);
+    border-radius: 50%;
+  }
+  .gauge .ring .pct {
+    position: relative; z-index: 1;
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 800;
+  }
+  .gauge .lab {
+    color: var(--fg-mute);
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  }
+  .reco-actions {
+    display: flex; gap: 8px;
+  }
+  .btn-confirm {
+    flex: 1;
+    padding: 11px 12px;
+    border: none; border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.6px;
+    cursor: pointer;
+    color: white;
+  }
+  .btn-confirm.keep { background: var(--ok); color: #0b2017; }
+  .btn-confirm.sell { background: var(--err); }
+  .btn-skip {
+    padding: 11px 14px;
+    border: 1px solid var(--border-s);
+    background: transparent;
+    color: var(--fg-dim);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 12px; font-weight: 600;
+  }
+
+  /* Upgrade card */
+  .upgrade-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .up-title {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--accent);
+    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    margin-bottom: 10px;
+  }
+  .up-hero {
+    color: var(--legend);
+    font-size: 13px; font-weight: 800; letter-spacing: 0.4px;
+    margin-bottom: 2px;
+  }
+  .up-sub {
+    color: var(--fg-dim);
+    font-size: 10px; font-style: italic;
+    margin-bottom: 10px;
+  }
+  .up-row {
+    display: flex; justify-content: space-between;
+    font-size: 11px;
+    padding: 3px 0;
+  }
+  .up-row .k { color: var(--fg-dim); }
+  .up-row .v { color: var(--fg); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+  .up-divider {
+    height: 1px; background: var(--border); margin: 10px 0;
+  }
+  .up-delta {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 11px;
+  }
+  .up-delta .lab { color: var(--fg-mute); font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; }
+  .up-delta .lvl {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--fg);
+  }
+  .up-delta .lvl .arrow { color: var(--accent); margin: 0 6px; }
+  .up-delta .boost { color: var(--ok); font-weight: 700; }
+
+  /* Caption */
+  .caption {
+    max-width: 960px;
+    margin: 24px auto;
+    padding: 16px 24px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--fg-dim);
+    font-size: 12px; line-height: 1.6;
+  }
+  .caption strong { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="logo">LUCI2US</div>
+    <div class="navitem active"><span class="ic">⚡</span><span>SCANNER</span></div>
+    <div class="navitem"><span class="ic">⚙</span><span>FILTRES</span></div>
+    <div class="navitem"><span class="ic">◈</span><span>RUNES</span></div>
+    <div class="navitem"><span class="ic">♟</span><span>MONSTRES</span></div>
+    <div class="navitem"><span class="ic">📊</span><span>STATS</span></div>
+    <div class="navitem"><span class="ic">👤</span><span>PROFILS</span></div>
+    <div class="navitem"><span class="ic">⚙</span><span>PARAMÈTRES</span></div>
+  </aside>
+
+  <!-- ===== PAGE SCAN ===== -->
+  <main class="page">
+
+    <!-- HEADER (style Runes : eyebrow + gros titre) -->
+    <div class="page-head">
+      <div class="title-col">
+        <div class="eyebrow">SCAN EN DIRECT</div>
+        <h1>Scanner de Runes</h1>
+      </div>
+      <div class="head-right">
+        <div class="mode-pill">MODE AVANCÉ</div>
+        <div class="status-pill"><span class="dot"></span>SWEX CONNECTÉ</div>
+        <button class="btn-primary">⏸ Pause</button>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- TOOLBAR : session stats (style Monstres toolbar) -->
+    <div class="toolbar">
+      <div class="stat-cell"><div class="lab">Session</div><div class="val">00:14:32</div></div>
+      <div class="stat-cell"><div class="lab">Runes scannées</div><div class="val">42</div></div>
+      <div class="stat-cell keep"><div class="lab">Gardées</div><div class="val">8</div></div>
+      <div class="stat-cell sell"><div class="lab">Vendues</div><div class="val">34</div></div>
+      <div class="stat-cell mana"><div class="lab">Mana récupérée</div><div class="val">67.2k</div></div>
+      <div class="stat-cell"><div class="lab">Efficience moy.</div><div class="val">74.3%</div></div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- BODY (style Monstres : left scroll | right side panel pleine hauteur) -->
+    <div class="body">
+
+      <!-- LEFT : scanned + history -->
+      <div class="body-left">
+
+        <section>
+          <div class="section-title">
+            <h3>Dernière Rune Scannée</h3>
+            <span class="hint">IL Y A 2s</span>
+          </div>
+          <div class="scanned-card">
+            <div class="scan-portrait">
+              <div class="set-icon">⚔</div>
+              <div class="slot">4</div>
+              <div class="lvl">+12</div>
+            </div>
+            <div class="scan-info">
+              <div class="st">RAGE • LÉGENDAIRE</div>
+              <div class="mt">TX CRIT +23%</div>
+              <div class="substats">
+                <div class="sub-row"><span class="k">PV</span><span class="v hi">+10%</span></div>
+                <div class="sub-row"><span class="k">ATQ</span><span class="v hi">+10%</span></div>
+                <div class="sub-row"><span class="k">VIT</span><span class="v">+9</span></div>
+                <div class="sub-row"><span class="k">DG CRIT</span><span class="v hi">+9%</span></div>
+              </div>
+            </div>
+            <div class="scan-score">
+              <div class="score-row">
+                <span class="lab">Score</span>
+                <span class="val big">87.3%</span>
+              </div>
+              <div class="grade-badge">GRADE SS</div>
+              <div class="score-row">
+                <span class="lab">Potentiel</span>
+                <span class="val mono">95.1%</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">
+            <h3>Historique de la session</h3>
+            <span class="hint">6 DERNIÈRES</span>
+          </div>
+          <div class="history-grid">
+            <div class="hist-card keep">
+              <div class="ic">⚔</div>
+              <div class="body">
+                <div class="name">Rage +12 (4)</div>
+                <div class="meta">TX CRIT +23%</div>
+              </div>
+              <div class="verdict keep">KEEP</div>
+            </div>
+            <div class="hist-card sell">
+              <div class="ic">🛡</div>
+              <div class="body">
+                <div class="name">Garde +9 (2)</div>
+                <div class="meta">ATQ% +8%</div>
+              </div>
+              <div class="verdict sell">SELL</div>
+            </div>
+            <div class="hist-card sell">
+              <div class="ic">💨</div>
+              <div class="body">
+                <div class="name">Rapide +3 (1)</div>
+                <div class="meta">ATQ +88</div>
+              </div>
+              <div class="verdict sell">SELL</div>
+            </div>
+            <div class="hist-card keep">
+              <div class="ic">🗡</div>
+              <div class="body">
+                <div class="name">Lame +12 (5)</div>
+                <div class="meta">DG CRIT +30%</div>
+              </div>
+              <div class="verdict keep">KEEP</div>
+            </div>
+            <div class="hist-card sell">
+              <div class="ic">💢</div>
+              <div class="body">
+                <div class="name">Fatal +6 (3)</div>
+                <div class="meta">DEF% +6%</div>
+              </div>
+              <div class="verdict sell">SELL</div>
+            </div>
+            <div class="hist-card sell">
+              <div class="ic">💀</div>
+              <div class="body">
+                <div class="name">Désespoir +0 (6)</div>
+                <div class="meta">PV +1800</div>
+              </div>
+              <div class="verdict sell">SELL</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT : Side panel (style Monstres MonsterSidePanel) -->
+      <aside class="body-right">
+
+        <div class="reco-panel">
+          <div class="reco-eyebrow">RECOMMANDATION DE L'OPTIMISEUR</div>
+          <div class="reco-decision keep">GARDER</div>
+          <div class="reco-score-row">
+            <span class="coin">◉</span>
+            <span>Score</span>
+            <span class="val">87.3% / 95.1% max</span>
+          </div>
+          <div class="reco-reason">
+            Matche le filtre <strong>« Rage CC Slot4 »</strong> — efficience
+            projetée à +15 au-dessus du seuil (≥ 85%). Sub-stats de haute qualité.
+          </div>
+          <div class="gauges">
+            <div class="gauge" style="--pct:0.87;--gcol:var(--accent)">
+              <div class="ring"><span class="pct">87%</span></div>
+              <div class="lab">EFFI S2US</div>
+            </div>
+            <div class="gauge" style="--pct:0.74;--gcol:var(--legend)">
+              <div class="ring"><span class="pct">74%</span></div>
+              <div class="lab">EFFI SWOP</div>
+            </div>
+          </div>
+          <div class="reco-actions">
+            <button class="btn-confirm keep">CONFIRMER GARDER</button>
+            <button class="btn-skip">Skip</button>
+          </div>
+        </div>
+
+        <div class="upgrade-card">
+          <div class="up-title">◉ DERNIÈRE RUNE AMÉLIORÉE</div>
+          <div class="up-hero">+15 LÉGENDAIRE VIOLENT (Slot 2)</div>
+          <div class="up-sub">Améliorée il y a 4 min</div>
+
+          <div class="up-row"><span class="k">Grade</span><span class="v">6★</span></div>
+          <div class="up-row"><span class="k">DG CRIT</span><span class="v">+80%</span></div>
+          <div class="up-row"><span class="k">VIT</span><span class="v">+18</span></div>
+          <div class="up-row"><span class="k">PV%</span><span class="v">+14%</span></div>
+          <div class="up-row"><span class="k">TX CRIT</span><span class="v">+11%</span></div>
+
+          <div class="up-divider"></div>
+
+          <div class="up-delta">
+            <span class="lab">Amélioration</span>
+            <span class="lvl">+12 <span class="arrow">→</span> +15</span>
+            <span class="lab" style="margin-top:4px">Stat augmentée</span>
+            <span class="boost">TX CRIT +11%</span>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+
+    <div class="caption">
+      <strong>Maquette Scan v1</strong> — reprend du style <strong>Runes</strong>
+      (header eyebrow + titre, cards rondies bordure colorée par rareté, palette
+      magenta/or) et de <strong>Monstres</strong> (layout body + side panel
+      pleine hauteur, toolbar en ligne de stat-cells, séparateurs 1px).
+      Clique une zone pour me dire ce qui te parle ou ce qui cloche.
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

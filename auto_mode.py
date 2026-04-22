@@ -158,10 +158,8 @@ class AutoMode:
         self._set_state(State.ANALYZING)
         try:
             verdict = evaluate_chain(rune, self._config)
-            if verdict.decision != "POWER-UP":
-                self._record_rune(rune, verdict)
-            if self._on_rune_processed:
-                self._on_rune_processed(rune, verdict)
+            # Un upgrade ne touche que le panneau "Dernière Rune Améliorée".
+            # Pas de re-push vers "Dernière Rune Scannée" ni recomptage en session.
             if self._on_rune_upgraded:
                 self._on_rune_upgraded(rune, verdict)
         except Exception:
