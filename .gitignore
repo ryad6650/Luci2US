@@ -46,3 +46,6 @@ tools/realesrgan/
 
 # Upscale demo artefacts
 _hd_demo/
+
+# Git worktrees (local isolation, not for sync)
+.worktrees/
