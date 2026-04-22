@@ -3,23 +3,15 @@
 Module pur (pas de Qt). Réutilise :
   - powerup_simulator.project_to_plus12(rune, grind_grade, gem_grade) pour
     énumérer toutes les variantes +12 atteignables.
-  - s2us_filter.calculate_efficiency1 pour scorer chaque variante.
-  - s2us_filter.match_filter pour savoir quels filtres matcheraient la
-    variante optimisée.
+  - swlens.rl_score pour scorer chaque variante.
 """
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass
 
 from models import Rune
 from powerup_simulator import project_to_plus12
-from s2us_filter import (
-    S2USFilter,
-    calculate_efficiency1,
-    calculate_score,
-    match_filter,
-)
+from swlens import rl_score
 
 
 @dataclass
@@ -28,19 +20,23 @@ class OptimizerResult:
     efficiency: float
 
 
+def _score(rune: Rune) -> float:
+    return float(rl_score(rune).total)
+
+
 def best_variant(
     rune: Rune,
     grind_grade: int = 0,
     gem_grade: int = 0,
 ) -> OptimizerResult:
-    """Énumère toutes les variantes +12 et retourne celle de max Efficiency1."""
+    """Énumère toutes les variantes +12 et retourne celle de max RL Score."""
     variants = project_to_plus12(
         rune, grind_grade=grind_grade, gem_grade=gem_grade,
     )
     if not variants:
-        return OptimizerResult(rune=rune, efficiency=float(calculate_efficiency1(rune)))
-    best = max(variants, key=calculate_efficiency1)
-    return OptimizerResult(rune=best, efficiency=float(calculate_efficiency1(best)))
+        return OptimizerResult(rune=rune, efficiency=_score(rune))
+    best = max(variants, key=_score)
+    return OptimizerResult(rune=best, efficiency=_score(best))
 
 
 def best_plus0(
@@ -59,62 +55,3 @@ def best_now(
 ) -> OptimizerResult:
     """Rune à +12 → meilleure amélioration immédiate avec ces grades."""
     return best_variant(rune, grind_grade=grind_grade, gem_grade=gem_grade)
-
-
-def filters_that_match(
-    rune: Rune,
-    filters: list[S2USFilter],
-) -> list[S2USFilter]:
-    """Filtres enabled qui acceptent cette rune, triés par seuil décroissant."""
-    matching = [f for f in filters if f.enabled and match_filter(rune, f)]
-    matching.sort(key=lambda f: f.efficiency, reverse=True)
-    return matching
-
-
-def best_tied_variants(
-    rune: Rune,
-    grind_grade: int = 0,
-    gem_grade: int = 0,
-) -> list[Rune]:
-    """Variantes +12 à égalité sur Eff1 max puis Score max.
-
-    Le vrai bot expose un comportement non-déterministe sur l'exemple affiché
-    (Parallel.ForEach + ConcurrentBag ligne 1691 de -.18.cs). On reproduit ça
-    en retournant la liste complète des variantes tied, laissant l'UI tirer
-    au hasard.
-    """
-    variants = project_to_plus12(
-        rune, grind_grade=grind_grade, gem_grade=gem_grade,
-    )
-    if not variants:
-        return []
-    scored = [
-        (v, calculate_efficiency1(v), calculate_score(v))
-        for v in variants
-    ]
-    max_eff = max(s[1] for s in scored)
-    max_score = max(s[2] for s in scored if s[1] == max_eff)
-    return [v for v, e, sc in scored if e == max_eff and sc == max_score]
-
-
-def random_tied_variant(
-    rune: Rune,
-    grind_grade: int = 0,
-    gem_grade: int = 0,
-    rng: random.Random | None = None,
-) -> OptimizerResult:
-    """Tire une variante au hasard parmi celles à Eff1/Score max."""
-    tied = best_tied_variants(
-        rune, grind_grade=grind_grade, gem_grade=gem_grade,
-    )
-    if not tied:
-        return OptimizerResult(
-            rune=rune,
-            efficiency=float(calculate_efficiency1(rune)),
-        )
-    picker = rng if rng is not None else random
-    pick = picker.choice(tied)
-    return OptimizerResult(
-        rune=pick,
-        efficiency=float(calculate_efficiency1(pick)),
-    )
