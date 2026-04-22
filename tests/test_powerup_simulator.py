@@ -235,16 +235,6 @@ class TestRollMode:
         best_min = simulate_powerup(r, grind_grade=4, gem_grade=4, roll_mode="min").best.efficiency
         assert best_max >= best_mid >= best_min
 
-    def test_smart_filter_uses_max_mode(self):
-        """Garantit que match_filter_smart (s2us_filter) projette en mode max
-        — condition pour que les seuils de filtre existants restent cohérents."""
-        from s2us_filter import match_filter_smart, S2USFilter
-        # Pas d'assertion fonctionnelle ici — juste s'assurer que l'appel
-        # ne casse pas et que le module expose bien le chemin max.
-        f = S2USFilter(name="test", level=-1, efficiency=80.0, eff_method="S2US")
-        r = self._rage_rune()
-        _ = match_filter_smart(r, f)  # ne doit pas crasher
-
 
 class TestSimulatePowerup:
     def test_reference_rune_best_gte_worst(self):

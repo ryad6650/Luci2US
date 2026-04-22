@@ -259,27 +259,20 @@ class SimulationOutput:
     best: SimResult
     worst: SimResult
     variant_count: int
-    keep_rate: float | None = None
 
 
 def simulate_powerup(
     rune: Rune,
     grind_grade: int = 0,
     gem_grade: int = 0,
-    filters=None,
-    global_settings: dict | None = None,
     roll_mode: str = "mid",
 ) -> SimulationOutput:
-    """Génère toutes les variantes +12 et agrège best/worst par efficiency.
+    """Génère toutes les variantes +12 et agrège best/worst par RL Score.
 
     `roll_mode` = 'mid' par défaut (projection moyenne pour affichage UI).
     Utiliser 'max' pour potentiel théorique, 'min' pour pire cas.
-
-    Si `filters` est fourni, calcule `keep_rate` = % de variantes passant au
-    moins un filtre (via `match_filter`).
     """
-    # Import tardif pour éviter cycle
-    from s2us_filter import calculate_efficiency1, match_filter
+    from swlens import rl_score
 
     variants = project_to_plus12(
         rune, grind_grade=grind_grade, gem_grade=gem_grade, roll_mode=roll_mode,
@@ -288,23 +281,14 @@ def simulate_powerup(
         empty = SimResult(efficiency=0.0, substats=[])
         return SimulationOutput(best=empty, worst=empty, variant_count=0)
 
-    scored = [(calculate_efficiency1(v), v) for v in variants]
+    scored = [(float(rl_score(v).total), v) for v in variants]
     scored.sort(key=lambda x: x[0])
 
     worst_eff, worst_rune = scored[0]
     best_eff, best_rune = scored[-1]
 
-    keep_rate: float | None = None
-    if filters is not None:
-        kept = 0
-        for _, v in scored:
-            if any(match_filter(v, f) for f in filters):
-                kept += 1
-        keep_rate = round(kept / len(scored) * 100, 2)
-
     return SimulationOutput(
         best=SimResult(efficiency=float(best_eff), substats=best_rune.substats),
         worst=SimResult(efficiency=float(worst_eff), substats=worst_rune.substats),
         variant_count=len(scored),
-        keep_rate=keep_rate,
     )
