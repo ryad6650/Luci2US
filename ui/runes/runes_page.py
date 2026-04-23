@@ -6,14 +6,13 @@ Layout :
     RuneGridView    (FlowLayout paginé de RuneCardWidget)
 
 Actions :
-    upgrade_clicked → RuneTesterModal(filters=filtres_page.current_filters())
-                                        .set_rune(rune).exec()
     lock_toggled    → toggle volatile dans `self._locked_ids` (non persisté)
     edit_clicked    → non implémenté pour l'instant (bouton désactivé)
+    upgrade_clicked → inerte (l'ancien RuneTesterModal a été supprimé avec
+                      le retrait de la paradigme filtres S2US)
 
-API publique préservée pour `main_window` :
+API publique pour `main_window` :
     runes_page.apply_profile(profile, saved_at)
-    runes_page.set_filters_source(filtres_page)  # nouveau
 """
 from __future__ import annotations
 
@@ -23,7 +22,6 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from models import Rune
 from swlens import rl_score
 from ui import theme
-from ui.filtres.rune_tester_modal import RuneTesterModal
 from ui.runes.rune_filter_bar import RuneFilterBar
 from ui.runes.rune_grid_view import RuneGridView
 
@@ -47,8 +45,6 @@ class RunesPage(QWidget):
         self._all_runes: list[Rune] = []
         self._equipped_index: dict = {}
         self._locked_ids: set = set()
-        self._filters_source = None
-        self._tester_modal: RuneTesterModal | None = None
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -61,7 +57,6 @@ class RunesPage(QWidget):
         outer.addWidget(self._filter_bar)
 
         self._grid = RuneGridView()
-        self._grid.upgrade_clicked.connect(self._open_tester)
         self._grid.lock_toggled.connect(self._toggle_lock)
         self._grid.edit_clicked.connect(self._on_edit)
         outer.addWidget(self._grid, 1)
@@ -90,12 +85,6 @@ class RunesPage(QWidget):
         return header
 
     # ── Public API ────────────────────────────────────────────────────
-    def set_filters_source(self, filters_page) -> None:
-        """Branche la page Filtres pour que le modal `Améliorer` connaisse
-        les filtres utilisateur. Le duck-typing sur `current_filters()` est
-        suffisant (evite un import circulaire)."""
-        self._filters_source = filters_page
-
     def apply_profile(self, profile: dict, saved_at) -> None:
         self._all_runes = list(profile.get("runes", []))
         self._equipped_index = {}
@@ -158,22 +147,6 @@ class RunesPage(QWidget):
         )
 
     # ── Actions ───────────────────────────────────────────────────────
-    def _open_tester(self, rune: Rune) -> None:
-        filters = []
-        if self._filters_source is not None and hasattr(
-            self._filters_source, "current_filters"
-        ):
-            try:
-                filters = list(self._filters_source.current_filters())
-            except Exception:
-                filters = []
-
-        # Un modal neuf par ouverture : set_rune() pré-remplit l'état,
-        # puis RuneTesterModal gère tout le cycle de vie (cache tied, etc.).
-        modal = RuneTesterModal(filters=filters, parent=self.window())
-        modal.set_rune(rune)
-        modal.exec()
-
     def _toggle_lock(self, rune: Rune) -> None:
         key = rune.rune_id if rune.rune_id is not None else id(rune)
         if key in self._locked_ids:

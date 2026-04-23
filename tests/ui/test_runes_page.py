@@ -116,13 +116,3 @@ def test_toggle_lock_updates_locked_ids(qapp):
     assert 7 not in p.locked_ids
 
 
-def test_set_filters_source_stores_reference(qapp):
-    p = RunesPage()
-
-    class _Stub:
-        def current_filters(self):
-            return ["a", "b"]
-
-    stub = _Stub()
-    p.set_filters_source(stub)
-    assert p._filters_source is stub
