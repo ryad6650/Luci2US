@@ -21,7 +21,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from models import Rune
-from s2us_filter import calculate_efficiency_s2us
+from swlens import rl_score
 from ui import theme
 from ui.filtres.rune_tester_modal import RuneTesterModal
 from ui.runes.rune_filter_bar import RuneFilterBar
@@ -32,7 +32,7 @@ def _eff(rune: Rune) -> float:
     if rune.swex_efficiency is not None:
         return float(rune.swex_efficiency)
     try:
-        return float(calculate_efficiency_s2us(rune))
+        return float(rl_score(rune).total)
     except Exception:
         return 0.0
 

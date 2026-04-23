@@ -14,7 +14,7 @@ from i18n import t
 from models import Monster, Rune
 from monster_icons import get_monster_icon
 from profile_loader import load_profile_from_dict, load_profile_from_file
-from s2us_filter import calculate_efficiency_s2us
+from swlens import rl_score
 
 
 class ProfileTab(ctk.CTkFrame):
@@ -305,7 +305,7 @@ class ProfileTab(ctk.CTkFrame):
             return
 
         for i, rune in enumerate(mon.equipped_runes):
-            eff = calculate_efficiency_s2us(rune)
+            eff = rl_score(rune).total
             frame = ctk.CTkFrame(self._detail_scroll, fg_color="#1f2937")
             frame.grid(row=i, column=0, sticky="ew", pady=2, padx=4)
             frame.grid_columnconfigure(0, weight=1)
@@ -358,7 +358,7 @@ class ProfileTab(ctk.CTkFrame):
     def _avg_eff(mon: Monster) -> float:
         if not mon.equipped_runes:
             return 0.0
-        total = sum(calculate_efficiency_s2us(r) for r in mon.equipped_runes)
+        total = sum(rl_score(r).total for r in mon.equipped_runes)
         return total / len(mon.equipped_runes)
 
     @staticmethod

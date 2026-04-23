@@ -13,11 +13,14 @@ from models import GEM_MAX, GRIND_MAX, Rune, SubStat
 from rune_optimizer import (
     best_plus0,
     best_now,
-    best_tied_variants,
-    filters_that_match,
 )
 from s2us_filter import S2USFilter
 from ui import theme
+
+
+def filters_that_match(rune, filters):
+    """Stub: return filters that match a rune. TODO: implement in Task 14+."""
+    return []
 
 
 _STATS_DISPLAY = ["SPD", "HP%", "HP", "ATK%", "ATK", "DEF%", "DEF",
@@ -505,9 +508,10 @@ class RuneTesterModal(QDialog):
 
         key = self._source_cache_key(rune, grind, gem)
         if key != self._tied_cache_key:
-            self._tied_variants = best_tied_variants(
+            result = best_now(
                 rune, grind_grade=grind, gem_grade=gem,
             )
+            self._tied_variants = [result.rune]
             self._tied_cache_key = key
 
         picked = (

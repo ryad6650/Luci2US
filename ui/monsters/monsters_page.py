@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from models import Monster, Rune
-from s2us_filter import calculate_efficiency_s2us
+from swlens import rl_score
 from ui import theme
 G = theme.D
 from ui.monsters.elements import ELEMENTS, element_key, hex_alpha, make_star_pixmap
@@ -46,7 +46,7 @@ def _rune_efficiency(rune: Rune) -> float | None:
     if rune.swex_efficiency is not None:
         return float(rune.swex_efficiency)
     try:
-        return float(calculate_efficiency_s2us(rune))
+        return float(rl_score(rune).total)
     except Exception:
         return None
 
