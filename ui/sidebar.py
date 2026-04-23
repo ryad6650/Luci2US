@@ -34,7 +34,7 @@ _LOGO_PATH = os.path.join(
 
 NAV_ITEMS: list[tuple[str, str, str | None]] = [
     ("scan",          "Scan",                 None),   # LIVE dot handled separately
-    ("filters",       "Filtres",              None),
+    ("swlens",        "Paramètres SWLens",    None),
     ("runes",         "Runes",                "1.2k"),
     ("monsters",      "Monstres",             None),
     ("stats_history", "Stats & Historique",   None),
@@ -45,7 +45,7 @@ NAV_ITEMS: list[tuple[str, str, str | None]] = [
 
 _ICON = {
     "scan":          "\u25CE",   # ◎
-    "filters":       "\u2261",   # ≡
+    "swlens":        "\u2261",   # ≡
     "runes":         "\u2726",   # ✦
     "monsters":      "\u2618",   # ☘
     "stats_history": "\u2630",   # ☰

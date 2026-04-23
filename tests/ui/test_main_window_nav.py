@@ -10,7 +10,7 @@ def test_on_nav_maps_all_7_keys(qapp):
     mw = MainWindow()
     expected = {
         "scan":          0,
-        "filters":       1,
+        "swlens":        1,
         "runes":         2,
         "monsters":      3,
         "stats_history": 4,
@@ -36,11 +36,11 @@ def test_settings_index_is_settings_page(qapp):
     assert isinstance(current, SettingsPage)
 
 
-def test_filters_index_is_filtres_page(qapp):
-    from ui.filtres.filtres_page import FiltresPage
+def test_swlens_index_is_swlens_settings_page(qapp):
+    from ui.swlens_settings.swlens_settings_page import SwlensSettingsPage
     mw = MainWindow()
-    mw._on_nav("filters")
-    assert isinstance(mw._stack.currentWidget(), FiltresPage)
+    mw._on_nav("swlens")
+    assert isinstance(mw._stack.currentWidget(), SwlensSettingsPage)
 
 
 def test_monsters_index_is_monsters_page(qapp):

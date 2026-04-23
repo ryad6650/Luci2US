@@ -15,13 +15,13 @@ from profile_loader import invalidate_bestiary_cache, load_profile_from_dict
 from profile_store import load_profile_payload, save_profile_payload
 from ui import theme
 from ui.controllers.scan_controller import ScanController
-from ui.filtres.filtres_page import FiltresPage
 from ui.monsters.monsters_page import MonstersPage
 from ui.profile.profile_page import ProfilePage
 from ui.runes.runes_page import RunesPage
 from ui.settings.settings_page import SettingsPage
 from ui.sidebar import Sidebar
 from ui.scan.scan_page import ScanPage
+from ui.swlens_settings.swlens_settings_page import SwlensSettingsPage
 from ui.stats_history.stats_history_page import StatsHistoryPage
 from ui.widgets.background import BackgroundPane
 from ui.widgets.title_bar import WinTitleBar
@@ -71,18 +71,19 @@ class MainWindow(QMainWindow):
         bg_lay = QHBoxLayout(bg)
         bg_lay.setContentsMargins(0, 0, 0, 0)
 
+        self._config: dict = {}
+
         self._stack = QStackedWidget()
         self.scan_page = ScanPage()
         self.profile_page = ProfilePage()
 
         # Index 0 : Scan
         self._stack.addWidget(self.scan_page)
-        # Index 1 : Filtres
-        self.filtres_page = FiltresPage()
-        self._stack.addWidget(self.filtres_page)
-        # Index 2 : Runes (branchée à la page Filtres pour le modal "Améliorer")
+        # Index 1 : Paramètres SWLens
+        self.swlens_settings_page = SwlensSettingsPage(self._config)
+        self._stack.addWidget(self.swlens_settings_page)
+        # Index 2 : Runes
         self.runes_page = RunesPage()
-        self.runes_page.set_filters_source(self.filtres_page)
         self._stack.addWidget(self.runes_page)
         # Index 3 : Monstres
         self.monsters_page = MonstersPage()
@@ -211,7 +212,7 @@ class MainWindow(QMainWindow):
     def _on_nav(self, key: str) -> None:
         pages = {
             "scan":          (0, "Scan"),
-            "filters":       (1, "Filtres"),
+            "swlens":        (1, "Paramètres SWLens"),
             "runes":         (2, "Runes"),
             "monsters":      (3, "Monstres"),
             "stats_history": (4, "Stats & Historique"),

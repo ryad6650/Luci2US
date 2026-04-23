@@ -5,7 +5,7 @@ def test_nav_items_order_and_keys():
     keys = [item[0] for item in NAV_ITEMS]
     assert keys == [
         "scan",
-        "filters",
+        "swlens",
         "runes",
         "monsters",
         "stats_history",
@@ -17,7 +17,7 @@ def test_nav_items_order_and_keys():
 def test_nav_items_labels_french():
     labels = [item[1] for item in NAV_ITEMS]
     assert any("Scan" in l for l in labels)
-    assert any("Filtres" in l for l in labels)
+    assert any("SWLens" in l for l in labels)
     assert any("Runes" in l for l in labels)
     assert any("Monstres" in l for l in labels)
     assert any("Stats" in l for l in labels)
